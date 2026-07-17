@@ -1,0 +1,90 @@
+# =========================
+# Root
+# =========================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# =========================
+# Backend (NestJS)
+# =========================
+backend/node_modules/
+backend/dist/
+backend/coverage/
+
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+
+backend/*.log
+backend/npm-debug.log*
+backend/yarn-debug.log*
+backend/yarn-error.log*
+backend/pnpm-debug.log*
+
+backend/.nestjs-cli.json
+
+# =========================
+# Frontend (Next.js)
+# =========================
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.vercel/
+frontend/coverage/
+
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.production.local
+frontend/.env.test.local
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+frontend/*.log
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+
+# =========================
+# Package Managers
+# =========================
+**/.pnpm-store/
+**/.npm/
+**/.yarn/
+
+# =========================
+# Build Files
+# =========================
+**/dist/
+**/build/
+**/tmp/
+**/temp/
+
+# =========================
+# TypeScript
+# =========================
+**/*.tsbuildinfo
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+
+# =========================
+# Docker
+# =========================
+docker-data/
+postgres-data/
+
+# =========================
+# OS Files
+# =========================
+Desktop.ini
+ehthumbs.db

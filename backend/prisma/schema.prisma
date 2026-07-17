@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @db.VarChar(100)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash")
+  avatarUrl    String?  @map("avatar_url")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  monitoredClassrooms Classroom[]       @relation("ClassroomMonitor")
+  classroomMemberships ClassroomMember[]
+  topics               Topic[]
+
+  @@map("users")
+}
+
+model Classroom {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(150)
+  courseCode  String   @map("course_code") @db.VarChar(50)
+  description String?
+  joinCode    String   @unique @map("join_code") @db.VarChar(8)
+
+  monitorId String @map("monitor_id") @db.Uuid
+
+  isArchived Boolean @default(false) @map("is_archived")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  monitor User @relation("ClassroomMonitor", fields: [monitorId], references: [id])
+
+  members     ClassroomMember[]
+  submissions Submission[]
+
+  @@index([monitorId])
+
+  @@map("classrooms")
+}
+
+model ClassroomMember {
+  id String @id @default(uuid()) @db.Uuid
+
+  classroomId String @map("classroom_id") @db.Uuid
+  userId      String @map("user_id") @db.Uuid
+
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([classroomId, userId], name: "uq_classroom_member")
+
+  @@index([userId])
+
+  @@map("classroom_members")
+}
+
+model Submission {
+  id String @id @default(uuid()) @db.Uuid
+
+  classroomId String @map("classroom_id") @db.Uuid
+
+  title       String @db.VarChar(200)
+  description String?
+
+  openDate  DateTime @map("open_date")
+  closeDate DateTime @map("close_date")
+
+  isOpen Boolean @default(true) @map("is_open")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  topics Topic[]
+
+  @@index([classroomId])
+
+  @@map("submissions")
+}
+
+model Topic {
+  id String @id @default(uuid()) @db.Uuid
+
+  submissionId String @map("submission_id") @db.Uuid
+  studentId    String @map("student_id") @db.Uuid
+
+  originalTitle   String @map("original_title") @db.VarChar(255)
+  normalizedTitle String @map("normalized_title") @db.VarChar(255)
+
+  embedding Unsupported("vector(384)")?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, studentId], name: "uq_submission_student")
+
+  @@index([submissionId])
+  @@index([studentId])
+  @@index([submissionId, normalizedTitle])
+
+  @@map("topics")
+}

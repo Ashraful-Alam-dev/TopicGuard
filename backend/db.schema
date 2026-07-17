@@ -1,0 +1,84 @@
+CREATE DATABASE topic_guard;
+
+CREATE TABLE users (
+    id UUID PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    avatar_url TEXT,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE classrooms (
+    id UUID PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    course_code VARCHAR(50) NOT NULL,
+    description TEXT,
+    join_code VARCHAR(10) UNIQUE NOT NULL,
+    monitor_id UUID NOT NULL REFERENCES users(id),
+    is_archived BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE classroom_members (
+    id UUID PRIMARY KEY,
+    classroom_id UUID NOT NULL REFERENCES classrooms(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    joined_at TIMESTAMP NOT NULL,
+
+    UNIQUE(classroom_id, user_id)
+);
+
+CREATE TABLE submissions (
+    id UUID PRIMARY KEY,
+    classroom_id UUID NOT NULL REFERENCES classrooms(id) ON DELETE CASCADE,
+
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+
+    open_date TIMESTAMP NOT NULL,
+    close_date TIMESTAMP NOT NULL,
+
+    is_open BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE topics (
+    id UUID PRIMARY KEY,
+
+    submission_id UUID NOT NULL REFERENCES submissions(id) ON DELETE CASCADE,
+
+    student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    original_title VARCHAR(255) NOT NULL,
+
+    normalized_title VARCHAR(255) NOT NULL,
+
+    embedding VECTOR(384),
+
+    created_at TIMESTAMP NOT NULL,
+
+    updated_at TIMESTAMP NOT NULL,
+
+    UNIQUE(submission_id, student_id)
+);
+
+CREATE INDEX idx_classroom_monitor
+ON classrooms(monitor_id);
+
+CREATE INDEX idx_submission_classroom
+ON submissions(classroom_id);
+
+CREATE INDEX idx_topic_submission
+ON topics(submission_id);
+
+CREATE INDEX idx_topic_student
+ON topics(student_id);
+
+CREATE INDEX idx_topic_embedding
+ON topics
+USING ivfflat (embedding vector_cosine_ops);
