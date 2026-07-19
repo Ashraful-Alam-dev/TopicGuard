@@ -1,42 +1,41 @@
-import { CrownIcon } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Classroom } from "@/types/classroom";
+import { Crown } from "lucide-react"
 
-function initials(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-}
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { getInitials } from "@/lib/utils-format"
+import type { User } from "@/lib/types"
 
-export function MemberList({ classroom }: { classroom: Classroom }) {
-  const members = classroom.members ?? [];
-
+export function MemberList({
+  members,
+  monitorId,
+}: {
+  members: User[]
+  monitorId: string
+}) {
   return (
-    <ul className="flex flex-col divide-y divide-border">
-      {members.map((member) => {
-        const isMonitor = member.id === classroom.monitor.id;
-        return (
-          <li key={member.id} className="flex items-center gap-3 py-3">
-            <Avatar>
-              <AvatarFallback>{initials(member.name)}</AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{member.name}</p>
-              <p className="truncate text-xs text-muted-foreground">{member.email}</p>
+    <ul className="flex flex-col gap-1">
+      {members.map((member) => (
+        <li
+          key={member.id}
+          className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-muted/60"
+        >
+          <Avatar size="sm">
+            <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <p className="truncate text-sm font-medium text-foreground">
+                {member.name}
+              </p>
+              {member.id === monitorId && (
+                <Crown className="size-3.5 shrink-0 text-warning" />
+              )}
             </div>
-            {isMonitor && (
-              <Badge variant="secondary" className="shrink-0 gap-1">
-                <CrownIcon className="text-warning" />
-                Monitor
-              </Badge>
-            )}
-          </li>
-        );
-      })}
+            <p className="truncate text-xs text-muted-foreground">
+              {member.email}
+            </p>
+          </div>
+        </li>
+      ))}
     </ul>
-  );
+  )
 }

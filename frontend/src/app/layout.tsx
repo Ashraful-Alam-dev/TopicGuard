@@ -1,21 +1,21 @@
 import type { Metadata } from "next";
-import { Inter, Manrope } from "next/font/google";
+import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AppProviders } from "@/providers/app-providers";
+import { Providers } from "@/components/providers/providers";
 
 const inter = Inter({
-  variable: "--font-sans",
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
-const manrope = Manrope({
-  variable: "--font-heading",
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
   title: "TopicGuard",
-  description: "AI-powered project topic registration platform.",
+  description: "Register project topics and let TopicGuard catch duplicates before they happen.",
 };
 
 export default function RootLayout({
@@ -26,11 +26,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${manrope.variable} h-full antialiased`}
+      className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
-        <AppProviders>{children}</AppProviders>
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

@@ -1,9 +1,9 @@
-"use client";
+"use client"
 
-import * as React from "react";
-import { ArchiveIcon, ArchiveRestoreIcon } from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Archive, ArchiveRestore, Loader2 } from "lucide-react"
+import { toast } from "sonner"
+
+import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,70 +14,75 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { useArchiveClassroom, useUnarchiveClassroom } from "@/hooks/use-classrooms";
-import { ApiError } from "@/lib/api-client";
-import { Classroom } from "@/types/classroom";
+} from "@/components/ui/alert-dialog"
+import {
+  useArchiveClassroom,
+  useUnarchiveClassroom,
+} from "@/lib/hooks/use-classrooms"
+import { getApiErrorMessage } from "@/lib/api/client"
+import type { Classroom } from "@/lib/types"
 
 export function ArchiveClassroomAction({ classroom }: { classroom: Classroom }) {
-  const archiveClassroom = useArchiveClassroom(classroom.id);
-  const unarchiveClassroom = useUnarchiveClassroom(classroom.id);
+  const archive = useArchiveClassroom(classroom.id)
+  const unarchive = useUnarchiveClassroom(classroom.id)
 
   if (classroom.isArchived) {
     return (
       <Button
         variant="outline"
         size="sm"
+        disabled={unarchive.isPending}
         onClick={() =>
-          unarchiveClassroom.mutate(undefined, {
+          unarchive.mutate(undefined, {
             onSuccess: () => toast.success("Classroom unarchived"),
-            onError: (error) =>
-              toast.error(
-                error instanceof ApiError ? error.message : "Couldn't unarchive the classroom",
-              ),
+            onError: (error) => toast.error(getApiErrorMessage(error)),
           })
         }
-        disabled={unarchiveClassroom.isPending}
       >
-        <ArchiveRestoreIcon />
-        {unarchiveClassroom.isPending ? "Unarchiving…" : "Unarchive"}
+        {unarchive.isPending ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <ArchiveRestore />
+        )}
+        Unarchive
       </Button>
-    );
+    )
   }
 
   return (
     <AlertDialog>
-      <AlertDialogTrigger render={<Button variant="outline" size="sm" />}>
-        <ArchiveIcon />
-        Archive
-      </AlertDialogTrigger>
+      <AlertDialogTrigger
+        render={
+          <Button variant="outline" size="sm">
+            <Archive />
+            Archive
+          </Button>
+        }
+      />
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Archive this classroom?</AlertDialogTitle>
           <AlertDialogDescription>
-            Archived classrooms become read-only — no edits, no new members,
-            and the monitor role can&apos;t be transferred until it&apos;s
-            unarchived.
+            {classroom.name} becomes read-only — no edits, joins, or monitor
+            changes — until you unarchive it. You can unarchive it at any time.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
+            disabled={archive.isPending}
             onClick={() =>
-              archiveClassroom.mutate(undefined, {
+              archive.mutate(undefined, {
                 onSuccess: () => toast.success("Classroom archived"),
-                onError: (error) =>
-                  toast.error(
-                    error instanceof ApiError ? error.message : "Couldn't archive the classroom",
-                  ),
+                onError: (error) => toast.error(getApiErrorMessage(error)),
               })
             }
-            disabled={archiveClassroom.isPending}
           >
-            {archiveClassroom.isPending ? "Archiving…" : "Archive classroom"}
+            {archive.isPending && <Loader2 className="size-4 animate-spin" />}
+            Archive
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  );
+  )
 }

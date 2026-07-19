@@ -1,14 +1,13 @@
-"use client";
+"use client"
 
-import * as React from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { LogInIcon } from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import * as React from "react"
+import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { KeyRound, Loader2 } from "lucide-react"
+import { toast } from "sonner"
+
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -17,89 +16,105 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { useJoinClassroom } from "@/hooks/use-classrooms";
-import { ApiError } from "@/lib/api-client";
-
-const schema = z.object({
-  joinCode: z
-    .string()
-    .length(8, "Join code must be exactly 8 characters")
-    .transform((value) => value.toUpperCase()),
-});
-
-type FormValues = z.infer<typeof schema>;
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { useJoinClassroom } from "@/lib/hooks/use-classrooms"
+import { getApiErrorMessage } from "@/lib/api/client"
+import {
+  joinClassroomSchema,
+  type JoinClassroomFormValues,
+} from "@/lib/validation/classroom"
 
 export function JoinClassroomDialog() {
-  const [open, setOpen] = React.useState(false);
-  const joinClassroom = useJoinClassroom();
+  const [open, setOpen] = React.useState(false)
+  const router = useRouter()
+  const joinClassroom = useJoinClassroom()
 
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { joinCode: "" },
-  });
+  } = useForm<JoinClassroomFormValues>({
+    resolver: zodResolver(joinClassroomSchema),
+  })
 
-  function onSubmit(values: FormValues) {
-    joinClassroom.mutate(
-      { joinCode: values.joinCode },
-      {
-        onSuccess: () => {
-          toast.success("Joined classroom");
-          setOpen(false);
-          reset();
-        },
-        onError: (error) => {
-          toast.error(
-            error instanceof ApiError ? error.message : "Couldn't join that classroom",
-          );
-        },
+  function onSubmit(values: JoinClassroomFormValues) {
+    joinClassroom.mutate(values.joinCode, {
+      onSuccess: (classroom) => {
+        toast.success(`Joined ${classroom.name}`)
+        setOpen(false)
+        reset()
+        router.push(`/classrooms/${classroom.id}`)
       },
-    );
+      onError: (error) => toast.error(getApiErrorMessage(error)),
+    })
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline" />}>
-        <LogInIcon />
-        Join with code
-      </DialogTrigger>
-      <DialogContent>
-        <form onSubmit={handleSubmit(onSubmit)}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (!next) reset()
+      }}
+    >
+      <DialogTrigger
+        render={
+          <Button variant="outline">
+            <KeyRound />
+            Join with code
+          </Button>
+        }
+      />
+      <DialogContent className="sm:max-w-sm">
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <DialogHeader>
             <DialogTitle>Join a classroom</DialogTitle>
             <DialogDescription>
-              Ask the monitor for the 8-character join code.
+              Enter the 8-character code your monitor shared with you.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-1.5 py-4">
-            <Label htmlFor="joinCode">Join code</Label>
+          <div className="py-4">
+            <Label htmlFor="joinCode" className="sr-only">
+              Join code
+            </Label>
             <Input
               id="joinCode"
-              placeholder="A3F9K2QP"
+              placeholder="A1B2C3D4"
               maxLength={8}
+              autoCapitalize="characters"
               autoComplete="off"
-              className="font-mono uppercase tracking-widest"
-              aria-invalid={Boolean(errors.joinCode)}
+              className="text-center font-mono text-lg tracking-[0.3em] uppercase"
+              aria-invalid={!!errors.joinCode}
               {...register("joinCode")}
             />
             {errors.joinCode && (
-              <p className="text-xs text-destructive">{errors.joinCode.message}</p>
+              <p className="mt-1.5 text-center text-xs text-destructive">
+                {errors.joinCode.message}
+              </p>
             )}
           </div>
 
           <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </Button>
             <Button type="submit" disabled={joinClassroom.isPending}>
-              {joinClassroom.isPending ? "Joining…" : "Join classroom"}
+              {joinClassroom.isPending && (
+                <Loader2 className="size-4 animate-spin" />
+              )}
+              Join classroom
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

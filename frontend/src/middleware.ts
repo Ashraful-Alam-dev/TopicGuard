@@ -2,31 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 
 const AUTH_COOKIE = "access_token";
 const AUTH_ROUTES = ["/login", "/register"];
-const PROTECTED_PREFIXES = ["/dashboard", "/classroom"];
+const PUBLIC_ROUTES = [...AUTH_ROUTES];
 
 /**
- * Lightweight route gating based on cookie presence only. This does not
- * verify the JWT (middleware runs on the edge and doesn't have the
- * server's JWT secret) — real enforcement still happens on every API
- * call. This just avoids flashing protected/auth pages to the wrong
- * audience before the API call would reject them anyway.
+ * Lightweight route gate based on cookie presence only (no signature
+ * verification — that happens server-side on every API call). This just
+ * avoids flashing protected pages to signed-out visitors and bounces
+ * signed-in users away from the auth pages.
  */
 export function middleware(request: NextRequest) {
-  const hasToken = request.cookies.has(AUTH_COOKIE);
   const { pathname } = request.nextUrl;
-
-  const isProtected = PROTECTED_PREFIXES.some((prefix) =>
-    pathname.startsWith(prefix),
+  const hasSession = request.cookies.has(AUTH_COOKIE);
+  const isPublicRoute = PUBLIC_ROUTES.some((route) =>
+    pathname.startsWith(route),
   );
-  const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
 
-  if (isProtected && !hasToken) {
+  if (!hasSession && !isPublicRoute && pathname !== "/") {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
+    loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  if ((isAuthRoute || pathname === "/") && hasToken) {
+  if (hasSession && AUTH_ROUTES.some((route) => pathname.startsWith(route))) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
@@ -34,5 +31,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/register", "/dashboard/:path*", "/classroom/:path*"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };
