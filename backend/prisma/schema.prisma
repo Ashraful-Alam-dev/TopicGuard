@@ -16,19 +16,20 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  monitoredClassrooms Classroom[]       @relation("ClassroomMonitor")
+  monitoredClassrooms  Classroom[]       @relation("ClassroomMonitor")
   classroomMemberships ClassroomMember[]
   topics               Topic[]
+  sentMessages         Message[]
 
   @@map("users")
 }
 
 model Classroom {
-  id          String   @id @default(uuid()) @db.Uuid
-  name        String   @db.VarChar(150)
-  courseCode  String   @map("course_code") @db.VarChar(50)
+  id          String  @id @default(uuid()) @db.Uuid
+  name        String  @db.VarChar(150)
+  courseCode  String  @map("course_code") @db.VarChar(50)
   description String?
-  joinCode    String   @unique @map("join_code") @db.VarChar(8)
+  joinCode    String  @unique @map("join_code") @db.VarChar(8)
 
   monitorId String @map("monitor_id") @db.Uuid
 
@@ -41,9 +42,9 @@ model Classroom {
 
   members     ClassroomMember[]
   submissions Submission[]
+  messages    Message[]
 
   @@index([monitorId])
-
   @@map("classrooms")
 }
 
@@ -59,10 +60,28 @@ model ClassroomMember {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([classroomId, userId], name: "uq_classroom_member")
-
   @@index([userId])
-
   @@map("classroom_members")
+}
+
+model Message {
+  id String @id @default(uuid()) @db.Uuid
+
+  classroomId String @map("classroom_id") @db.Uuid
+  senderId    String @map("sender_id") @db.Uuid
+
+  title   String @db.VarChar(200)
+  content String
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  sender    User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([classroomId])
+  @@index([senderId])
+  @@map("messages")
 }
 
 model Submission {
@@ -70,7 +89,7 @@ model Submission {
 
   classroomId String @map("classroom_id") @db.Uuid
 
-  title       String @db.VarChar(200)
+  title       String  @db.VarChar(200)
   description String?
 
   openDate  DateTime @map("open_date")
@@ -86,7 +105,6 @@ model Submission {
   topics Topic[]
 
   @@index([classroomId])
-
   @@map("submissions")
 }
 
@@ -108,10 +126,8 @@ model Topic {
   student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([submissionId, studentId], name: "uq_submission_student")
-
   @@index([submissionId])
   @@index([studentId])
   @@index([submissionId, normalizedTitle])
-
   @@map("topics")
 }

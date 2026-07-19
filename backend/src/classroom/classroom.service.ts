@@ -249,6 +249,48 @@ export class ClassroomService {
     }
   }
 
+  // ---------------------------------------------------------------------
+  // Reusable access-control helpers for other modules (Submission, Topic).
+  // These wrap the existing private checks below without changing them.
+  // ---------------------------------------------------------------------
+
+  /**
+   * Lightweight fetch (no relations) for modules that only need to check
+   * classroom state (e.g. isArchived) rather than render a full detail view.
+   */
+  async getRawById(id: string): Promise<Classroom> {
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id },
+    });
+
+    if (!classroom) {
+      throw new NotFoundException('Classroom not found');
+    }
+
+    return classroom;
+  }
+
+  /**
+   * Asserts the user is the monitor or a joined member of the classroom.
+   * Used by SubmissionService/TopicService to gate read access.
+   */
+  async assertMembership(
+    classroomId: string,
+    userId: string,
+  ): Promise<Classroom> {
+    const classroom = await this.getRawById(classroomId);
+    await this.assertIsMember(classroom, userId);
+    return classroom;
+  }
+
+  /**
+   * Asserts the user is the classroom's monitor. Used by SubmissionService
+   * to gate submission management actions.
+   */
+  async assertMonitor(classroomId: string, userId: string): Promise<Classroom> {
+    return this.getForMutation(classroomId, userId);
+  }
+
   private async generateUniqueJoinCode(): Promise<string> {
     for (let attempt = 0; attempt < MAX_JOIN_CODE_ATTEMPTS; attempt++) {
       const code = generateJoinCode();

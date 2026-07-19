@@ -2,7 +2,7 @@
 
 import { use } from "react"
 import Link from "next/link"
-import { ArrowLeft, Archive, Crown, Users } from "lucide-react"
+import { ArrowLeft, Archive, ClipboardList, Crown, Megaphone, Users } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
@@ -14,6 +14,10 @@ import { MemberList } from "@/components/classroom/member-list"
 import { EditClassroomDialog } from "@/components/classroom/edit-classroom-dialog"
 import { TransferMonitorDialog } from "@/components/classroom/transfer-monitor-dialog"
 import { ArchiveClassroomAction } from "@/components/classroom/archive-classroom-action"
+import { SendMessageDialog } from "@/components/message/send-message-dialog"
+import { MessageList } from "@/components/message/message-list"
+import { CreateSubmissionDialog } from "@/components/submission/create-submission-dialog"
+import { SubmissionList } from "@/components/submission/submission-list"
 import { useClassroom } from "@/lib/hooks/use-classrooms"
 import { formatDate } from "@/lib/utils-format"
 
@@ -95,6 +99,44 @@ export default function ClassroomDetailPage({
               </p>
             </Card>
           )}
+
+          <div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-1.5">
+                <Megaphone className="size-4 text-muted-foreground" />
+                <h2 className="text-sm font-medium text-foreground">
+                  Announcements
+                </h2>
+              </div>
+              {classroom.isMonitor && (
+                <SendMessageDialog classroomId={classroom.id} />
+              )}
+            </div>
+            <Separator className="my-3" />
+            <MessageList
+              classroomId={classroom.id}
+              isMonitor={classroom.isMonitor}
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-1.5">
+                <ClipboardList className="size-4 text-muted-foreground" />
+                <h2 className="text-sm font-medium text-foreground">
+                  Submissions
+                </h2>
+              </div>
+              {classroom.isMonitor && (
+                <CreateSubmissionDialog classroomId={classroom.id} />
+              )}
+            </div>
+            <Separator className="my-3" />
+            <SubmissionList
+              classroomId={classroom.id}
+              isMonitor={classroom.isMonitor}
+            />
+          </div>
 
           <Card className="px-4">
             <div className="flex items-center gap-1.5">

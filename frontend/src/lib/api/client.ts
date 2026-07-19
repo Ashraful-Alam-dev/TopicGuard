@@ -13,10 +13,30 @@ export const apiClient = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-/**
- * Normalizes NestJS's error response shape into a single readable message,
- * so callers (mutations, forms) don't need to know about the API's error format.
- */
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (
+      error.response?.status === 401 &&
+      typeof window !== "undefined"
+    ) {
+      if (
+        !window.location.pathname.startsWith("/login") &&
+        !window.location.pathname.startsWith("/register")
+      ) {
+        try {
+          await apiClient.post("/auth/logout");
+        } catch {}
+
+        window.location.replace("/login");
+      }
+    }
+
+    return Promise.reject(error);
+  },
+);
+
+
 export function getApiErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const data = (error as AxiosError<ApiErrorBody>).response?.data;

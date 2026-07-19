@@ -8,6 +8,9 @@ import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ClassroomModule } from './classroom/classroom.module';
+import { SubmissionModule } from './submission/submission.module';
+import { TopicModule } from './topics/topic.module';
+import { MessageModule } from './message/message.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
@@ -18,6 +21,9 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     AuthModule,
     UsersModule,
     ClassroomModule,
+    SubmissionModule,
+    TopicModule,
+    MessageModule,
   ],
   controllers: [AppController],
   providers: [
