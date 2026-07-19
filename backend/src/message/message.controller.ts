@@ -15,11 +15,6 @@ import { CreateMessageDto } from './dto/create-message.dto';
 import { MessageResponseDto } from './dto/message-response.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
-/**
- * No class-level prefix: creation/listing are nested under their owning
- * classroom, while single-resource actions (get/delete) address the
- * message directly. Mirrors SubmissionController's route layout.
- */
 @Controller()
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
