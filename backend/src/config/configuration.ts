@@ -10,4 +10,12 @@ export default () => ({
   cookie: {
     secure: process.env.COOKIE_SECURE === 'true',
   },
+  embedding: {
+    provider: process.env.EMBEDDING_PROVIDER ?? 'transformers',
+    transformerModel: process.env.TRANSFORMER_MODEL,
+    openaiModel: process.env.OPENAI_EMBEDDING_MODEL, similarityThreshold: Number(
+      process.env.SIMILARITY_THRESHOLD ?? 0.75,
+    ),
+    openaiApiKey: process.env.OPENAI_API_KEY,
+  },
 });

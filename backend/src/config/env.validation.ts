@@ -2,7 +2,10 @@ import { plainToInstance } from 'class-transformer';
 import {
   IsEnum,
   IsNumber,
+  IsOptional,
   IsString,
+  Max,
+  Min,
   MinLength,
   validateSync,
 } from 'class-validator';
@@ -11,6 +14,11 @@ enum Environment {
   Development = 'development',
   Production = 'production',
   Test = 'test',
+}
+
+enum EmbeddingProvider {
+  Transformers = 'transformers',
+  OpenAI = 'openai',
 }
 
 class EnvironmentVariables {
@@ -37,6 +45,27 @@ class EnvironmentVariables {
 
   @IsString()
   COOKIE_SECURE: string = 'false';
+
+  @IsEnum(EmbeddingProvider)
+  EMBEDDING_PROVIDER: EmbeddingProvider =
+    EmbeddingProvider.Transformers;
+
+  @IsOptional()
+  @IsString()
+  TRANSFORMER_MODEL?: string;
+
+  @IsOptional()
+  @IsString()
+  OPENAI_EMBEDDING_MODEL?: string;
+  
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  SIMILARITY_THRESHOLD: number = 0.75;
+
+  @IsOptional()
+  @IsString()
+  OPENAI_API_KEY?: string;
 }
 
 export function validate(config: Record<string, unknown>) {
@@ -52,6 +81,7 @@ export function validate(config: Record<string, unknown>) {
     const messages = errors
       .map((error) => Object.values(error.constraints ?? {}).join(', '))
       .join('; ');
+
     throw new Error(`Environment validation failed: ${messages}`);
   }
 

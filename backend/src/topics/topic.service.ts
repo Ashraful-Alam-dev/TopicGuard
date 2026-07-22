@@ -1,15 +1,25 @@
 import { ConflictException, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { Topic } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { ConfigService } from '@nestjs/config';
 import { SubmissionService } from '../submission/submission.service';
 import { TopicDto } from './dto/topic.dto';
 import { normalizeTitle } from '../common/utils/normalize-title.util';
+import { EmbeddingService } from '../embedding/embedding.service';
+import { TopicVectorRepository } from './topic-vector.repository';
+import { SimilarityCheckResponseDto } from './dto/similarity-check-response.dto';
+
+/** Number of matches returned by the semantic similarity check. */
+const SIMILAR_TOPICS_LIMIT = 5;
 
 @Injectable()
 export class TopicService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
     private readonly submissionService: SubmissionService,
+    private readonly embeddingService: EmbeddingService,
+    private readonly topicVectorRepository: TopicVectorRepository,
   ) { }
 
   async registerTopic(
@@ -30,15 +40,32 @@ export class TopicService {
     }
 
     const normalizedTitle = normalizeTitle(dto.title);
-    await this.assertNoDuplicateTitle(submissionId, normalizedTitle);
 
-    return this.prisma.topic.create({
-      data: {
-        submissionId,
-        studentId,
-        originalTitle: dto.title,
-        normalizedTitle,
-      },
+    await this.assertNoDuplicateTitle(
+      submissionId,
+      normalizedTitle,
+    );
+
+    const embedding =
+      await this.embeddingService.generateEmbedding(dto.title.trim());
+
+    return this.prisma.$transaction(async (tx) => {
+      const topic = await tx.topic.create({
+        data: {
+          submissionId,
+          studentId,
+          originalTitle: dto.title,
+          normalizedTitle,
+        },
+      });
+
+      await this.topicVectorRepository.upsertEmbedding(
+        tx,
+        topic.id,
+        embedding,
+      );
+
+      return topic;
     });
   }
 
@@ -51,17 +78,41 @@ export class TopicService {
       submissionId,
       studentId,
     );
-    const topic = await this.getOwnTopicOrThrow(submissionId, studentId);
+
+    const topic = await this.getOwnTopicOrThrow(
+      submissionId,
+      studentId,
+    );
 
     const normalizedTitle = normalizeTitle(dto.title);
-    await this.assertNoDuplicateTitle(submissionId, normalizedTitle, topic.id);
 
-    return this.prisma.topic.update({
-      where: { id: topic.id },
-      data: {
-        originalTitle: dto.title,
-        normalizedTitle,
-      },
+    await this.assertNoDuplicateTitle(
+      submissionId,
+      normalizedTitle,
+      topic.id,
+    );
+
+    const embedding =
+      await this.embeddingService.generateEmbedding(dto.title.trim());
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.topic.update({
+        where: {
+          id: topic.id,
+        },
+        data: {
+          originalTitle: dto.title,
+          normalizedTitle,
+        },
+      });
+
+      await this.topicVectorRepository.upsertEmbedding(
+        tx,
+        updated.id,
+        embedding,
+      );
+
+      return updated;
     });
   }
 
@@ -111,31 +162,31 @@ export class TopicService {
    * its own unchanged title.
    */
   private async assertNoDuplicateTitle(
-  submissionId: string,
-  normalizedTitle: string,
-  excludeTopicId?: string,
-) {
-  const duplicate = await this.prisma.topic.findFirst({
-    where: {
-      submissionId,
-      normalizedTitle,
-      ...(excludeTopicId ? { id: { not: excludeTopicId } } : {}),
-    },
-    include: {
-      student: {
-        select: {
-          name: true,
+    submissionId: string,
+    normalizedTitle: string,
+    excludeTopicId?: string,
+  ) {
+    const duplicate = await this.prisma.topic.findFirst({
+      where: {
+        submissionId,
+        normalizedTitle,
+        ...(excludeTopicId ? { id: { not: excludeTopicId } } : {}),
+      },
+      include: {
+        student: {
+          select: {
+            name: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  if (duplicate) {
-    throw new ConflictException(
-      `"${duplicate.originalTitle}" has already been registered by ${duplicate.student.name}. Please choose a different topic.`,
-    );
+    if (duplicate) {
+      throw new ConflictException(
+        `"${duplicate.originalTitle}" has already been registered by ${duplicate.student.name}. Please choose a different topic.`,
+      );
+    }
   }
-}
 
   async checkTopicAvailability(
     submissionId: string,
@@ -175,6 +226,8 @@ export class TopicService {
       student: duplicate.student,
     };
   }
+
+
 
   async getSubmissionTopics(
     submissionId: string,
@@ -238,5 +291,61 @@ export class TopicService {
       totalTopics: topics.length,
       topics,
     };
+  }
+
+  async checkSemanticSimilarity(
+    submissionId: string,
+    userId: string,
+    title: string,
+  ): Promise<SimilarityCheckResponseDto> {
+    await this.submissionService.assertMemberAccess(
+      submissionId,
+      userId,
+    );
+
+    const normalizedTitle = normalizeTitle(title);
+
+    const duplicate = await this.prisma.topic.findFirst({
+      where: {
+        submissionId,
+        normalizedTitle,
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (duplicate) {
+      return SimilarityCheckResponseDto.duplicateOf(duplicate);
+    }
+
+    const embedding =
+      await this.embeddingService.generateEmbedding(title.trim());
+
+    const matches =
+      await this.topicVectorRepository.findSimilarTopics(
+        this.prisma,
+        submissionId,
+        embedding,
+        SIMILAR_TOPICS_LIMIT,
+      );
+
+    const threshold =
+      this.configService.get<number>(
+        'embedding.similarityThreshold',
+      ) ?? 0.75;
+
+    const similarTopics = matches.filter(
+      (topic) => topic.similarity >= threshold,
+    );
+
+    return SimilarityCheckResponseDto.withSimilarTopics(
+      similarTopics,
+    );
   }
 }
