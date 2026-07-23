@@ -79,10 +79,16 @@ export class TopicService {
       studentId,
     );
 
-    const topic = await this.getOwnTopicOrThrow(
+    const topic = await this.findOwnTopic(
       submissionId,
       studentId,
     );
+
+    if (!topic) {
+      throw new NotFoundException(
+        'You have not registered a topic for this submission',
+      );
+    }
 
     const normalizedTitle = normalizeTitle(dto.title);
 
@@ -93,7 +99,9 @@ export class TopicService {
     );
 
     const embedding =
-      await this.embeddingService.generateEmbedding(dto.title.trim());
+      await this.embeddingService.generateEmbedding(
+        dto.title.trim(),
+      );
 
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.topic.update({
@@ -116,20 +124,46 @@ export class TopicService {
     });
   }
 
-  async deleteOwnTopic(submissionId: string, studentId: string): Promise<void> {
+  async deleteOwnTopic(
+    submissionId: string,
+    studentId: string,
+  ): Promise<void> {
     await this.submissionService.assertCanRegisterTopic(
       submissionId,
       studentId,
     );
-    const topic = await this.getOwnTopicOrThrow(submissionId, studentId);
-    await this.prisma.topic.delete({ where: { id: topic.id } });
+
+    const topic = await this.findOwnTopic(
+      submissionId,
+      studentId,
+    );
+
+    if (!topic) {
+      throw new NotFoundException(
+        'You have not registered a topic for this submission',
+      );
+    }
+
+    await this.prisma.topic.delete({
+      where: {
+        id: topic.id,
+      },
+    });
   }
 
-  async getOwnTopic(submissionId: string, studentId: string): Promise<Topic> {
-    // Viewing is allowed even after the submission closes — only
-    // create/edit/delete require it to still be open.
-    await this.submissionService.assertMemberAccess(submissionId, studentId);
-    return this.getOwnTopicOrThrow(submissionId, studentId);
+  async getOwnTopic(
+    submissionId: string,
+    studentId: string,
+  ) {
+    await this.submissionService.assertMemberAccess(
+      submissionId,
+      studentId,
+    );
+
+    return this.getOwnTopicOrThrow(
+      submissionId,
+      studentId,
+    );
   }
 
   private async findOwnTopic(
@@ -146,21 +180,49 @@ export class TopicService {
   private async getOwnTopicOrThrow(
     submissionId: string,
     studentId: string,
-  ): Promise<Topic> {
-    const topic = await this.findOwnTopic(submissionId, studentId);
+  ) {
+    const topic = await this.findOwnTopic(
+      submissionId,
+      studentId,
+    );
+
     if (!topic) {
       throw new NotFoundException(
         'You have not registered a topic for this submission',
       );
     }
-    return topic;
+
+    const threshold =
+      this.configService.get<number>(
+        'embedding.similarityThreshold',
+      ) ?? 0.5;
+
+    const matches =
+      await this.topicVectorRepository.findSimilarTopicsByTopicId(
+        this.prisma,
+        submissionId,
+        topic.id,
+        SIMILAR_TOPICS_LIMIT,
+      );
+
+    const similarTopics = matches
+      .filter((m) => m.similarity >= threshold)
+      .map((m) => ({
+        title: m.title,
+        studentName: m.studentName,
+        similarityScore: m.similarity,
+      }));
+
+    return {
+      ...topic,
+      highestSimilarity:
+        similarTopics.length > 0
+          ? similarTopics[0].similarityScore
+          : null,
+      similarTopics,
+    };
   }
 
-  /**
-   * Duplicate check is scoped to the submission only, per spec. excludeTopicId
-   * lets an edit compare against every *other* topic without tripping on
-   * its own unchanged title.
-   */
   private async assertNoDuplicateTitle(
     submissionId: string,
     normalizedTitle: string,
@@ -256,6 +318,11 @@ export class TopicService {
       );
     }
 
+    const threshold =
+      this.configService.get<number>(
+        'embedding.similarityThreshold',
+      ) ?? 0.3;
+
     const topics = await this.prisma.topic.findMany({
       where: {
         submissionId,
@@ -275,6 +342,35 @@ export class TopicService {
       },
     });
 
+    const enrichedTopics = await Promise.all(
+      topics.map(async (topic) => {
+        const matches =
+          await this.topicVectorRepository.findSimilarTopicsByTopicId(
+            this.prisma,
+            submissionId,
+            topic.id,
+            SIMILAR_TOPICS_LIMIT,
+          );
+
+        const similarTopics = matches
+          .filter((m) => m.similarity >= threshold)
+          .map((m) => ({
+            title: m.title,
+            studentName: m.studentName,
+            similarityScore: m.similarity,
+          }));
+
+        return {
+          ...topic,
+          highestSimilarity:
+            similarTopics.length > 0
+              ? similarTopics[0].similarityScore
+              : null,
+          similarTopics,
+        };
+      }),
+    );
+
     return {
       submission: {
         id: submission.id,
@@ -288,8 +384,8 @@ export class TopicService {
         id: submission.classroom.id,
         name: submission.classroom.name,
       },
-      totalTopics: topics.length,
-      topics,
+      totalTopics: enrichedTopics.length,
+      topics: enrichedTopics,
     };
   }
 
@@ -309,6 +405,7 @@ export class TopicService {
       where: {
         submissionId,
         normalizedTitle,
+        studentId: { not: userId },
       },
       include: {
         student: {
@@ -333,12 +430,14 @@ export class TopicService {
         submissionId,
         embedding,
         SIMILAR_TOPICS_LIMIT,
+        undefined,
+        userId,
       );
 
     const threshold =
       this.configService.get<number>(
         'embedding.similarityThreshold',
-      ) ?? 0.75;
+      ) ?? 0.30;
 
     const similarTopics = matches.filter(
       (topic) => topic.similarity >= threshold,

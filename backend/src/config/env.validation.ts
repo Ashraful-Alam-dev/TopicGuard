@@ -61,7 +61,7 @@ class EnvironmentVariables {
   @IsNumber()
   @Min(0)
   @Max(1)
-  SIMILARITY_THRESHOLD: number = 0.75;
+  SIMILARITY_THRESHOLD: number = 0.30;
 
   @IsOptional()
   @IsString()

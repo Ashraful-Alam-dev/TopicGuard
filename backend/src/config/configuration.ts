@@ -14,7 +14,7 @@ export default () => ({
     provider: process.env.EMBEDDING_PROVIDER ?? 'transformers',
     transformerModel: process.env.TRANSFORMER_MODEL,
     openaiModel: process.env.OPENAI_EMBEDDING_MODEL, similarityThreshold: Number(
-      process.env.SIMILARITY_THRESHOLD ?? 0.75,
+      process.env.SIMILARITY_THRESHOLD ?? 0.30,
     ),
     openaiApiKey: process.env.OPENAI_API_KEY,
   },

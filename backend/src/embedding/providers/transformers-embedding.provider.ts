@@ -33,7 +33,7 @@ export class TransformersEmbeddingProvider
 
   async onModuleInit(): Promise<void> {
     const model =
-      this.configService.get<string>('embedding.transferModel') ??
+      this.configService.get<string>('embedding.transformerModel') ??
       'Xenova/all-MiniLM-L6-v2';
 
     this.logger.log(`Loading embedding model: ${model}`);

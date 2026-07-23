@@ -28,6 +28,10 @@ backend/pnpm-debug.log*
 
 backend/.nestjs-cli.json
 
+# Hugging Face / Transformers cache
+.cache/
+models/
+
 # =========================
 # Frontend (Next.js)
 # =========================

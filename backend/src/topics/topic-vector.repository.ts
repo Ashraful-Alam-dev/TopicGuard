@@ -50,10 +50,14 @@ export class TopicVectorRepository {
     embedding: number[],
     limit: number,
     excludeTopicId?: string,
+    excludeStudentId?: string,
   ): Promise<SimilarTopicRow[]> {
     const vectorLiteral = toVectorLiteral(embedding);
     const excludeClause = excludeTopicId
       ? Prisma.sql`AND t.id != ${excludeTopicId}::uuid`
+      : Prisma.empty;
+    const excludeStudentClause = excludeStudentId
+      ? Prisma.sql`AND t.student_id != ${excludeStudentId}::uuid`
       : Prisma.empty;
 
     return executor.$queryRaw<SimilarTopicRow[]>`
@@ -69,8 +73,39 @@ export class TopicVectorRepository {
         t.submission_id = ${submissionId}::uuid
         AND t.embedding IS NOT NULL
       ${excludeClause}
+      ${excludeStudentClause}
       ORDER BY t.embedding <=> ${vectorLiteral}::vector ASC
       LIMIT ${limit}
     `;
+  }
+
+  async findSimilarTopicsByTopicId(
+    executor: PrismaExecutor,
+    submissionId: string,
+    topicId: string,
+    limit: number,
+  ): Promise<SimilarTopicRow[]> {
+    return executor.$queryRaw<SimilarTopicRow[]>`
+    SELECT
+      t2.id AS "topicId",
+      t2.submission_id AS "submissionId",
+      t2.original_title AS "title",
+      u.name AS "studentName",
+      1 - (t1.embedding <=> t2.embedding) AS "similarity"
+    FROM topics t1
+    JOIN topics t2
+      ON t2.submission_id = t1.submission_id
+     AND t2.id <> t1.id
+    JOIN users u
+      ON u.id = t2.student_id
+    WHERE
+      t1.id = ${topicId}::uuid
+      AND t1.submission_id = ${submissionId}::uuid
+      AND t1.embedding IS NOT NULL
+      AND t2.embedding IS NOT NULL
+    ORDER BY
+      t1.embedding <=> t2.embedding
+    LIMIT ${limit}
+  `;
   }
 }

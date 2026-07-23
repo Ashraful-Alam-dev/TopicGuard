@@ -14,6 +14,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+
+import { TopicSimilarityBadge } from "@/components/topic/topic-similarity-badge"
+import { SimilarTopicsList } from "@/components/topic/similar-topics-list"
+
 import { useSubmissionTopics } from "@/lib/hooks/use-topics"
 import { getInitials, formatDateTime } from "@/lib/utils-format"
 
@@ -56,33 +60,53 @@ export function SubmissionTopicsPanel({
           <TableRow>
             <TableHead>Student</TableHead>
             <TableHead>Topic</TableHead>
+            <TableHead>Highest Similarity</TableHead>
             <TableHead className="text-right">Registered</TableHead>
           </TableRow>
         </TableHeader>
+
         <TableBody>
           {data.topics.map((topic) => (
             <TableRow key={topic.id}>
-              <TableCell>
+              <TableCell className="align-top">
                 <div className="flex items-center gap-2.5">
                   <Avatar size="sm">
                     <AvatarFallback>
                       {getInitials(topic.student.name)}
                     </AvatarFallback>
                   </Avatar>
+
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">
+                    <p className="truncate text-sm font-medium">
                       {topic.student.name}
                     </p>
+
                     <p className="truncate text-xs text-muted-foreground">
                       {topic.student.email}
                     </p>
                   </div>
                 </div>
               </TableCell>
-              <TableCell className="text-sm text-foreground">
-                {topic.originalTitle}
+
+              <TableCell className="align-top">
+                <div className="space-y-2">
+                  <p className="font-medium">
+                    {topic.originalTitle}
+                  </p>
+
+                  <SimilarTopicsList
+                    topics={topic.similarTopics}
+                  />
+                </div>
               </TableCell>
-              <TableCell className="text-right text-xs text-muted-foreground">
+
+              <TableCell className="align-top">
+                <TopicSimilarityBadge
+                  similarity={topic.highestSimilarity}
+                />
+              </TableCell>
+
+              <TableCell className="text-right text-xs text-muted-foreground align-top">
                 {formatDateTime(topic.createdAt)}
               </TableCell>
             </TableRow>

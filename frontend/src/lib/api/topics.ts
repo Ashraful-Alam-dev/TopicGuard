@@ -1,6 +1,10 @@
 import axios from "axios";
 import { apiClient } from "./client";
-import type { SubmissionTopicsResponse, Topic } from "@/lib/types";
+import type {
+  SimilarityCheckResponse,
+  SubmissionTopicsResponse,
+  Topic,
+} from "@/lib/types";
 
 export interface TopicPayload {
   title: string;
@@ -71,4 +75,18 @@ export const topicsApi = {
       )
       .then((res) => res.data),
 
+  /**
+   * Semantic similarity check, run right before a final submit. Never
+   * blocks by itself — it either reports an exact duplicate (belt-and-
+   * braces, the same thing checkAvailability already surfaces live) or the
+   * closest semantically-similar topics so the student can decide whether
+   * to submit anyway or go rework their title.
+   */
+  checkSimilarity: (submissionId: string, title: string) =>
+    apiClient
+      .post<SimilarityCheckResponse>(`/topics/check-similarity`, {
+        submissionId,
+        title,
+      })
+      .then((res) => res.data),
 };

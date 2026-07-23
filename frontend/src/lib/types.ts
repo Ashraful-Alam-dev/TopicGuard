@@ -46,10 +46,36 @@ export interface Topic {
   normalizedTitle: string;
   createdAt: string;
   updatedAt: string;
+
+  highestSimilarity: number | null;
+  similarTopics: SimilarTopic[];
+}
+
+export interface SimilarTopic {
+  title: string;
+  similarityScore: number;
+  submissionId: string;
+  studentName?: string;
 }
 
 export interface TopicWithStudent extends Topic {
   student: Pick<User, "id" | "name" | "email" | "avatarUrl">;
+
+  highestSimilarity: number | null;
+
+  similarTopics: SimilarTopic[];
+}
+
+export interface DuplicateTopic {
+  studentId: string;
+  studentName: string;
+  title: string;
+}
+
+export interface SimilarityCheckResponse {
+  isDuplicate: boolean;
+  duplicate?: DuplicateTopic;
+  similarTopics?: SimilarTopic[];
 }
 
 export interface SubmissionTopicsResponse {
@@ -57,11 +83,14 @@ export interface SubmissionTopicsResponse {
     Submission,
     "id" | "title" | "description" | "openDate" | "closeDate" | "isOpen"
   >;
+
   classroom: {
     id: string;
     name: string;
   };
+
   totalTopics: number;
+
   topics: TopicWithStudent[];
 }
 

@@ -92,3 +92,16 @@ export function useTopicAvailability(
     staleTime: 5000,
   });
 }
+
+/**
+ * Semantic similarity check — triggered on submit, not on keystroke (unlike
+ * useTopicAvailability). It's a mutation rather than a query because it's an
+ * imperative "check this right now, once" action that gates whether we show
+ * a confirmation dialog before actually saving.
+ */
+export function useCheckSimilarity(submissionId: string) {
+  return useMutation({
+    mutationFn: (title: string) =>
+      topicsApi.checkSimilarity(submissionId, title),
+  })
+}
