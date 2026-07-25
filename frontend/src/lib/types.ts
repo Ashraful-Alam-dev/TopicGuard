@@ -104,6 +104,19 @@ export interface Message {
   updatedAt: string;
 }
 
+/**
+ * Shape returned by POST /topics/consult-ai. Mirrors the backend's
+ * ConsultAiResponseDto exactly (see consult-ai-response.dto.ts) — camelCase,
+ * already clamped/normalized server-side.
+ */
+export interface ConsultAiResult {
+  score: number;
+  uniqueness: string;
+  relevance: string;
+  suggestions: string[];
+  recommendedTopics: string[];
+}
+
 export interface ApiErrorBody {
   statusCode: number;
   message: string | string[];

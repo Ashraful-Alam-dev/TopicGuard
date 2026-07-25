@@ -32,10 +32,19 @@ import {
   useTopicAvailability,
 } from "@/lib/hooks/use-topics"
 import { TopicSimilarityCard } from "@/components/topic/topic-similarity-card"
+import { ConsultAiButton } from "@/components/topic/consult-ai-button"
+import { ConsultAiCard } from "@/components/topic/consult-ai-card"
+import { useConsultAi } from "@/lib/hooks/use-consult-ai"
+import { getConsultAiErrorMessage } from "@/lib/consult-ai/get-error-message"
+import {
+  CONSULT_AI_COOLDOWN_SECONDS,
+  CONSULT_AI_MIN_TITLE_LENGTH,
+  CONSULT_AI_TITLE_MAX_LENGTH,
+} from "@/lib/consult-ai/constants"
 import { useDebounce } from "@/lib/hooks/use-debounce"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { topicSchema, type TopicFormValues } from "@/lib/validation/topic"
-import type { SimilarTopic, Submission } from "@/lib/types"
+import type { ConsultAiResult, SimilarTopic, Submission } from "@/lib/types"
 
 export function TopicPanel({ submission }: { submission: Submission }) {
   const { data: topic, isLoading } = useOwnTopic(submission.id)
@@ -63,6 +72,91 @@ export function TopicPanel({ submission }: { submission: Submission }) {
     React.useState<TopicFormValues | null>(null)
   const [similarTopics, setSimilarTopics] = React.useState<SimilarTopic[]>([])
 
+  // --- Consult AI (optional, non-blocking) -------------------------------
+  const consultAi = useConsultAi()
+  const [consultResult, setConsultResult] =
+    React.useState<ConsultAiResult | null>(null)
+  const [consultError, setConsultError] = React.useState<string | null>(null)
+  const [cooldownRemaining, setCooldownRemaining] = React.useState(0)
+  const cooldownIntervalRef = React.useRef<ReturnType<
+    typeof setInterval
+  > | null>(null)
+
+  React.useEffect(() => {
+    return () => {
+      if (cooldownIntervalRef.current) {
+        clearInterval(cooldownIntervalRef.current)
+      }
+    }
+  }, [])
+
+  function startConsultAiCooldown() {
+    setCooldownRemaining(CONSULT_AI_COOLDOWN_SECONDS)
+    if (cooldownIntervalRef.current) {
+      clearInterval(cooldownIntervalRef.current)
+    }
+    cooldownIntervalRef.current = setInterval(() => {
+      setCooldownRemaining((prev) => {
+        if (prev <= 1) {
+          if (cooldownIntervalRef.current) {
+            clearInterval(cooldownIntervalRef.current)
+          }
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
+  function dismissConsultAi() {
+    setConsultResult(null)
+    setConsultError(null)
+  }
+
+  function useRecommendedTopic(recommendedTitle: string) {
+    setTitle(recommendedTitle)
+    dismissConsultAi()
+  }
+
+  // Activation conditions #1 and #2 from the spec — cooldown (#3) and the
+  // in-flight request are handled separately by ConsultAiButton so a stale
+  // "active" value can't race a click that's already cooling down.
+  const isTitleLongEnough =
+    title.trim().length > CONSULT_AI_MIN_TITLE_LENGTH
+  const isConfirmedNotDuplicate =
+    title === debouncedTitle &&
+    !isCheckingAvailability &&
+    !!availability?.available
+  const consultAiActive = isTitleLongEnough && isConfirmedNotDuplicate
+
+  function handleConsultAi() {
+    if (!consultAiActive || cooldownRemaining > 0 || consultAi.isPending) {
+      return
+    }
+
+    // Cooldown starts immediately on click, independent of the request's
+    // own outcome — this is spam/rate-limit protection, not a loading state.
+    startConsultAiCooldown()
+    setConsultError(null)
+
+    consultAi.mutate(
+      {
+        submissionId: submission.id,
+        title: title.trim().slice(0, CONSULT_AI_TITLE_MAX_LENGTH),
+      },
+      {
+        onSuccess: (data) => {
+          setConsultResult(data)
+          setConsultError(null)
+        },
+        onError: (error) => {
+          setConsultResult(null)
+          setConsultError(getConsultAiErrorMessage(error))
+        },
+      },
+    )
+  }
+
   const {
     register,
     handleSubmit,
@@ -82,6 +176,7 @@ export function TopicPanel({ submission }: { submission: Submission }) {
           toast.success("Topic updated")
           setIsEditing(false)
           setPendingValues(null)
+          dismissConsultAi()
         },
         onError: (error) => toast.error(getApiErrorMessage(error)),
       })
@@ -90,6 +185,7 @@ export function TopicPanel({ submission }: { submission: Submission }) {
         onSuccess: () => {
           toast.success("Topic registered")
           setPendingValues(null)
+          dismissConsultAi()
         },
         onError: (error) => toast.error(getApiErrorMessage(error)),
       })
@@ -252,16 +348,25 @@ export function TopicPanel({ submission }: { submission: Submission }) {
             <Label htmlFor="topic-title">
               {topic ? "Edit your topic" : "Register your topic"}
             </Label>
-            <Input
-              id="topic-title"
-              placeholder="e.g. Real-time collaborative editing with CRDTs"
-              aria-invalid={!!errors.title}
-              {...register("title")}
-              value={title}
-              onChange={(e) => {
-                setTitle(e.target.value)
-              }}
-            />
+            <div className="relative">
+              <Input
+                id="topic-title"
+                placeholder="e.g. Real-time collaborative editing with CRDTs"
+                aria-invalid={!!errors.title}
+                className="pr-24"
+                {...register("title")}
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value)
+                }}
+              />
+              <ConsultAiButton
+                active={consultAiActive}
+                isPending={consultAi.isPending}
+                cooldownRemaining={cooldownRemaining}
+                onClick={handleConsultAi}
+              />
+            </div>
             {errors.title && (
               <p className="text-xs text-destructive">
                 {errors.title.message}
@@ -297,6 +402,15 @@ export function TopicPanel({ submission }: { submission: Submission }) {
             )}
           </div>
 
+          {(consultResult || consultError) && (
+            <ConsultAiCard
+              result={consultResult}
+              errorMessage={consultError}
+              onUseTopic={useRecommendedTopic}
+              onDismiss={dismissConsultAi}
+            />
+          )}
+
           <div className="flex items-center gap-2">
             <Button
               type="submit"
@@ -320,6 +434,7 @@ export function TopicPanel({ submission }: { submission: Submission }) {
                 onClick={() => {
                   setIsEditing(false)
                   reset({ title: topic.originalTitle })
+                  dismissConsultAi()
                 }}
               >
                 Cancel

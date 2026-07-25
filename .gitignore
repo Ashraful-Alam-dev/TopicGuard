@@ -15,7 +15,7 @@ backend/coverage/
 
 backend/.env
 backend/.env.*
-!backend/.env.example
+backend/.env.example
 
 backend/prisma/dev.db
 backend/prisma/dev.db-journal
@@ -92,3 +92,6 @@ postgres-data/
 # =========================
 Desktop.ini
 ehthumbs.db
+backend/src/schema.prisma.txt
+backend/src/package.json.txt
+backend/src/.env.example

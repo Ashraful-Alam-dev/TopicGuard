@@ -18,4 +18,9 @@ export default () => ({
     ),
     openaiApiKey: process.env.OPENAI_API_KEY,
   },
+  consultAi: {
+    groqApiKey: process.env.GROQ_API_KEY,
+    groqModel: process.env.GROQ_MODEL,
+    groqBaseUrl: process.env.GROQ_BASE_URL,
+  },
 });

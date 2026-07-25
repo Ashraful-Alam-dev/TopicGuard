@@ -66,6 +66,20 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   OPENAI_API_KEY?: string;
+
+  // Consult AI (Groq) — all optional so the app still boots and every
+  // other feature keeps working if this optional module isn't configured.
+  @IsOptional()
+  @IsString()
+  GROQ_API_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  GROQ_MODEL?: string;
+
+  @IsOptional()
+  @IsString()
+  GROQ_BASE_URL?: string;
 }
 
 export function validate(config: Record<string, unknown>) {
