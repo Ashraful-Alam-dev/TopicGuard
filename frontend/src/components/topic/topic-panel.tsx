@@ -23,6 +23,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { SimilarityConfirmDialog } from "@/components/topic/similarity-confirm-dialog"
+import { TopicMemberPicker } from "@/components/topic/topic-member-picker"
 import {
   useCheckSimilarity,
   useDeleteOwnTopic,
@@ -31,6 +32,7 @@ import {
   useUpdateOwnTopic,
   useTopicAvailability,
 } from "@/lib/hooks/use-topics"
+import { useAuth } from "@/lib/hooks/use-auth"
 import { TopicSimilarityCard } from "@/components/topic/topic-similarity-card"
 import { ConsultAiButton } from "@/components/topic/consult-ai-button"
 import { ConsultAiCard } from "@/components/topic/consult-ai-card"
@@ -44,15 +46,31 @@ import {
 import { useDebounce } from "@/lib/hooks/use-debounce"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { topicSchema, type TopicFormValues } from "@/lib/validation/topic"
-import type { ConsultAiResult, SimilarTopic, Submission } from "@/lib/types"
+import type {
+  ConsultAiResult,
+  SimilarTopic,
+  Submission,
+  TopicMember,
+} from "@/lib/types"
 
 export function TopicPanel({ submission }: { submission: Submission }) {
+  const { user } = useAuth()
   const { data: topic, isLoading } = useOwnTopic(submission.id)
   const registerTopic = useRegisterTopic(submission.id)
   const updateTopic = useUpdateOwnTopic(submission.id)
   const deleteTopic = useDeleteOwnTopic(submission.id)
   const checkSimilarity = useCheckSimilarity(submission.id)
   const [isEditing, setIsEditing] = React.useState(false)
+
+  // A student without a topic yet is always their own future leader. Once a
+  // topic exists, only the student who registered it may manage it — a
+  // team member can view but not edit/delete/change membership.
+  const isLeader =
+    !topic || !topic.isTeamTopic || topic.leader.id === user?.id
+
+  const [selectedMembers, setSelectedMembers] = React.useState<TopicMember[]>(
+    topic?.members ?? [],
+  )
 
   const [title, setTitle] = React.useState(
     topic?.originalTitle ?? "",
@@ -66,6 +84,7 @@ export function TopicPanel({ submission }: { submission: Submission }) {
   } = useTopicAvailability(
     submission.id,
     debouncedTitle,
+    topic?.id,
   )
 
   const [pendingValues, setPendingValues] =
@@ -78,9 +97,9 @@ export function TopicPanel({ submission }: { submission: Submission }) {
     React.useState<ConsultAiResult | null>(null)
   const [consultError, setConsultError] = React.useState<string | null>(null)
   const [cooldownRemaining, setCooldownRemaining] = React.useState(0)
-  const cooldownIntervalRef = React.useRef<ReturnType<
-    typeof setInterval
-  > | null>(null)
+  const cooldownIntervalRef = React.useRef<
+    ReturnType<typeof setInterval> | null
+  >(null)
 
   React.useEffect(() => {
     return () => {
@@ -92,9 +111,11 @@ export function TopicPanel({ submission }: { submission: Submission }) {
 
   function startConsultAiCooldown() {
     setCooldownRemaining(CONSULT_AI_COOLDOWN_SECONDS)
+
     if (cooldownIntervalRef.current) {
       clearInterval(cooldownIntervalRef.current)
     }
+
     cooldownIntervalRef.current = setInterval(() => {
       setCooldownRemaining((prev) => {
         if (prev <= 1) {
@@ -103,6 +124,7 @@ export function TopicPanel({ submission }: { submission: Submission }) {
           }
           return 0
         }
+
         return prev - 1
       })
     }, 1000)
@@ -115,6 +137,11 @@ export function TopicPanel({ submission }: { submission: Submission }) {
 
   function useRecommendedTopic(recommendedTitle: string) {
     setTitle(recommendedTitle)
+
+    reset({
+      title: recommendedTitle,
+    })
+
     dismissConsultAi()
   }
 
@@ -123,14 +150,21 @@ export function TopicPanel({ submission }: { submission: Submission }) {
   // "active" value can't race a click that's already cooling down.
   const isTitleLongEnough =
     title.trim().length > CONSULT_AI_MIN_TITLE_LENGTH
+
   const isConfirmedNotDuplicate =
     title === debouncedTitle &&
     !isCheckingAvailability &&
     !!availability?.available
-  const consultAiActive = isTitleLongEnough && isConfirmedNotDuplicate
+
+  const consultAiActive =
+    isTitleLongEnough && isConfirmedNotDuplicate
 
   function handleConsultAi() {
-    if (!consultAiActive || cooldownRemaining > 0 || consultAi.isPending) {
+    if (
+      !consultAiActive ||
+      cooldownRemaining > 0 ||
+      consultAi.isPending
+    ) {
       return
     }
 
@@ -164,14 +198,40 @@ export function TopicPanel({ submission }: { submission: Submission }) {
     formState: { errors },
   } = useForm<TopicFormValues>({
     resolver: zodResolver(topicSchema),
-    values: { title: topic?.originalTitle ?? "" },
+    defaultValues: {
+      title: "",
+    },
   })
+
+  /*
+   * Keep the form synchronized only when the actual topic changes.
+   *
+   * Do NOT use `values: { title: ... }` here. That would cause React Hook
+   * Form to overwrite the title whenever TopicPanel re-renders, such as
+   * when team members are selected or deselected.
+   */
+  React.useEffect(() => {
+    const currentTitle = topic?.originalTitle ?? ""
+
+    setTitle(currentTitle)
+
+    reset({
+      title: currentTitle,
+    })
+
+    setSelectedMembers(topic?.members ?? [])
+  }, [topic?.id, topic?.originalTitle, reset])
 
   const canManage = submission.isOpen
 
   function saveTopic(values: TopicFormValues) {
+    const payload = {
+      ...values,
+      memberIds: selectedMembers.map((member) => member.id),
+    }
+
     if (topic) {
-      updateTopic.mutate(values, {
+      updateTopic.mutate(payload, {
         onSuccess: () => {
           toast.success("Topic updated")
           setIsEditing(false)
@@ -181,7 +241,7 @@ export function TopicPanel({ submission }: { submission: Submission }) {
         onError: (error) => toast.error(getApiErrorMessage(error)),
       })
     } else {
-      registerTopic.mutate(values, {
+      registerTopic.mutate(payload, {
         onSuccess: () => {
           toast.success("Topic registered")
           setPendingValues(null)
@@ -197,28 +257,38 @@ export function TopicPanel({ submission }: { submission: Submission }) {
       return
     }
 
-    checkSimilarity.mutate(values.title, {
-      onSuccess: (result) => {
-        if (result.isDuplicate) {
-          toast.error(
-            result.duplicate
-              ? `"${result.duplicate.title}" has already been registered by ${result.duplicate.studentName}.`
-              : "This topic has already been registered.",
-          )
-          return
-        }
-
-        if (result.similarTopics && result.similarTopics.length > 0) {
-          setSimilarTopics(result.similarTopics)
-          setPendingValues(values)
-          return
-        }
-
-        // No overlap at all — nothing to confirm, save straight away.
-        saveTopic(values)
+    checkSimilarity.mutate(
+      {
+        title: values.title,
+        topicId: topic?.id,
       },
-      onError: (error) => toast.error(getApiErrorMessage(error)),
-    })
+      {
+        onSuccess: (result) => {
+          if (result.isDuplicate) {
+            toast.error(
+              result.duplicate
+                ? `"${result.duplicate.title}" has already been registered by ${result.duplicate.studentName}.`
+                : "This topic has already been registered.",
+            )
+            return
+          }
+
+          if (
+            result.similarTopics &&
+            result.similarTopics.length > 0
+          ) {
+            setSimilarTopics(result.similarTopics)
+            setPendingValues(values)
+            return
+          }
+
+          // No overlap at all — nothing to confirm, save straight away.
+          saveTopic(values)
+        },
+        onError: (error) =>
+          toast.error(getApiErrorMessage(error)),
+      },
+    )
   }
 
   function handleSubmitAnyway() {
@@ -236,12 +306,15 @@ export function TopicPanel({ submission }: { submission: Submission }) {
     return <Skeleton className="h-24 w-full" />
   }
 
-  const isSaving = registerTopic.isPending || updateTopic.isPending
-  const isCheckingSimilarity = checkSimilarity.isPending
+  const isSaving =
+    registerTopic.isPending || updateTopic.isPending
+
+  const isCheckingSimilarity =
+    checkSimilarity.isPending
 
   if (topic && !isEditing) {
     return (
-      <div className="space-y-3">
+      <>
         <TopicSimilarityCard
           topic={{
             ...topic,
@@ -257,12 +330,20 @@ export function TopicPanel({ submission }: { submission: Submission }) {
           showStudent={false}
         />
 
-        {canManage && (
+        {canManage && isLeader && (
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsEditing(true)}
+              onClick={() => {
+                setTitle(topic.originalTitle)
+                reset({
+                  title: topic.originalTitle,
+                })
+                setSelectedMembers(topic.members)
+                setIsEditing(true)
+                dismissConsultAi()
+              }}
             >
               <Pencil className="mr-2 size-4" />
               Edit
@@ -289,7 +370,7 @@ export function TopicPanel({ submission }: { submission: Submission }) {
                   </AlertDialogTitle>
 
                   <AlertDialogDescription>
-                    You'll need to register a new topic if you
+                    You&apos;ll need to register a new topic if you
                     change your mind.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -306,7 +387,9 @@ export function TopicPanel({ submission }: { submission: Submission }) {
                         onSuccess: () =>
                           toast.success("Topic deleted"),
                         onError: (error) =>
-                          toast.error(getApiErrorMessage(error)),
+                          toast.error(
+                            getApiErrorMessage(error),
+                          ),
                       })
                     }
                   >
@@ -321,7 +404,7 @@ export function TopicPanel({ submission }: { submission: Submission }) {
             </AlertDialog>
           </div>
         )}
-      </div>
+      </>
     )
   }
 
@@ -329,8 +412,8 @@ export function TopicPanel({ submission }: { submission: Submission }) {
     return (
       <Card className="px-4">
         <p className="text-sm text-muted-foreground">
-          This submission is closed and you didn&apos;t register a topic
-          while it was open.
+          This submission is closed and you didn&apos;t register a
+          topic while it was open.
         </p>
       </Card>
     )
@@ -348,58 +431,54 @@ export function TopicPanel({ submission }: { submission: Submission }) {
             <Label htmlFor="topic-title">
               {topic ? "Edit your topic" : "Register your topic"}
             </Label>
-            <div className="relative">
-              <Input
-                id="topic-title"
-                placeholder="e.g. Real-time collaborative editing with CRDTs"
-                aria-invalid={!!errors.title}
-                className="pr-24"
-                {...register("title")}
-                value={title}
-                onChange={(e) => {
+
+            <Input
+              id="topic-title"
+              placeholder="e.g. Real-time collaborative editing with CRDTs"
+              aria-invalid={!!errors.title}
+              className="pr-24"
+              {...register("title", {
+                onChange: (e) => {
                   setTitle(e.target.value)
-                }}
-              />
-              <ConsultAiButton
-                active={consultAiActive}
-                isPending={consultAi.isPending}
-                cooldownRemaining={cooldownRemaining}
-                onClick={handleConsultAi}
-              />
-            </div>
+                },
+              })}
+            />
+
             {errors.title && (
               <p className="text-xs text-destructive">
                 {errors.title.message}
               </p>
             )}
 
-            {!errors.title && debouncedTitle.trim().length > 2 && (
-              <>
-                {isCheckingAvailability && (
-                  <p className="text-xs text-muted-foreground">
-                    Checking topic availability...
-                  </p>
-                )}
-
-                {!isCheckingAvailability && availability?.available && (
-                  <p className="text-xs text-green-600">
-                    ✓ Topic is available
-                  </p>
-                )}
-
-                {!isCheckingAvailability &&
-                  availability &&
-                  !availability.available && (
-                    <p className="text-xs text-destructive">
-                      This topic has already been registered by{" "}
-                      <span className="font-medium">
-                        {availability.student?.name}
-                      </span>
-                      .
+            {!errors.title &&
+              debouncedTitle.trim().length > 2 && (
+                <>
+                  {isCheckingAvailability && (
+                    <p className="text-xs text-muted-foreground">
+                      Checking topic availability...
                     </p>
                   )}
-              </>
-            )}
+
+                  {!isCheckingAvailability &&
+                    availability?.available && (
+                      <p className="text-xs text-green-600">
+                        ✓ Topic is available
+                      </p>
+                    )}
+
+                  {!isCheckingAvailability &&
+                    availability &&
+                    !availability.available && (
+                      <p className="text-xs text-destructive">
+                        This topic has already been registered by{" "}
+                        <span className="font-medium">
+                          {availability.student?.name}
+                        </span>
+                        .
+                      </p>
+                    )}
+                </>
+              )}
           </div>
 
           {(consultResult || consultError) && (
@@ -411,21 +490,36 @@ export function TopicPanel({ submission }: { submission: Submission }) {
             />
           )}
 
+          {isLeader && (
+            <TopicMemberPicker
+              submissionId={submission.id}
+              selected={selectedMembers}
+              onChange={setSelectedMembers}
+              disabled={
+                isSaving || isCheckingSimilarity
+              }
+            />
+          )}
+
           <div className="flex items-center gap-2">
             <Button
               type="submit"
               size="sm"
-              disabled={isSaving || isCheckingSimilarity}
+              disabled={
+                isSaving || isCheckingSimilarity
+              }
             >
               {(isSaving || isCheckingSimilarity) && (
                 <Loader2 className="size-4 animate-spin" />
               )}
+
               {isCheckingSimilarity
                 ? "Checking for similar topics..."
                 : topic
                   ? "Save changes"
                   : "Register topic"}
             </Button>
+
             {topic && (
               <Button
                 type="button"
@@ -433,7 +527,11 @@ export function TopicPanel({ submission }: { submission: Submission }) {
                 size="sm"
                 onClick={() => {
                   setIsEditing(false)
-                  reset({ title: topic.originalTitle })
+                  setTitle(topic.originalTitle)
+                  reset({
+                    title: topic.originalTitle,
+                  })
+                  setSelectedMembers(topic.members)
                   dismissConsultAi()
                 }}
               >
@@ -447,7 +545,9 @@ export function TopicPanel({ submission }: { submission: Submission }) {
       <SimilarityConfirmDialog
         open={!!pendingValues}
         onOpenChange={(open) => {
-          if (!open) handleGoBackToEdit()
+          if (!open) {
+            handleGoBackToEdit()
+          }
         }}
         similarTopics={similarTopics}
         onConfirm={handleSubmitAnyway}

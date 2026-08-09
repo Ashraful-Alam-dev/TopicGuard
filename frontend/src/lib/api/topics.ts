@@ -1,6 +1,7 @@
 import axios from "axios";
 import { apiClient } from "./client";
 import type {
+  AvailableTopicMember,
   SimilarityCheckResponse,
   SubmissionTopicsResponse,
   Topic,
@@ -8,6 +9,13 @@ import type {
 
 export interface TopicPayload {
   title: string;
+  /**
+   * IDs of students to attach as team members. Optional — omitting it (or
+   * sending an empty array) registers/keeps the topic as an individual
+   * topic. The backend is authoritative on availability; this is only ever
+   * a UX hint.
+   */
+  memberIds?: string[];
 }
 
 export interface TopicAvailabilityResponse {
@@ -65,13 +73,30 @@ export const topicsApi = {
   checkAvailability: (
     submissionId: string,
     title: string,
+    topicId?: string,
   ) =>
     apiClient
-      .get<TopicAvailabilityResponse>(
+      .get(
         `/submissions/${submissionId}/topics/check`,
         {
-          params: { title },
+          params: {
+            title,
+            ...(topicId ? { topicId } : {}),
+          },
         },
+      )
+      .then((res) => res.data),
+
+  /**
+   * Students in the submission's classroom who aren't already attached
+   * (as leader or member) to a topic in this submission. Used to populate
+   * the team-member picker. Purely a UX aid — the backend still enforces
+   * availability when the topic is actually registered/updated.
+   */
+  getAvailableMembers: (submissionId: string) =>
+    apiClient
+      .get<AvailableTopicMember[]>(
+        `/submissions/${submissionId}/topics/available-members`,
       )
       .then((res) => res.data),
 
@@ -82,11 +107,16 @@ export const topicsApi = {
    * closest semantically-similar topics so the student can decide whether
    * to submit anyway or go rework their title.
    */
-  checkSimilarity: (submissionId: string, title: string) =>
+  checkSimilarity: (
+    submissionId: string,
+    title: string,
+    topicId?: string,
+  ) =>
     apiClient
-      .post<SimilarityCheckResponse>(`/topics/check-similarity`, {
+      .post(`/topics/check-similarity`, {
         submissionId,
         title,
+        ...(topicId ? { topicId } : {}),
       })
       .then((res) => res.data),
 };

@@ -51,6 +51,32 @@ export function TopicSimilarityCard({
           </p>
         </div>
 
+        {topic.isTeamTopic && (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground">
+                Team Leader
+              </p>
+              <p className="mt-1 text-sm font-medium">
+                {topic.leader.name}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs text-muted-foreground">
+                Team Members
+              </p>
+              <div className="mt-1 flex flex-col gap-0.5">
+                {topic.members.map((member) => (
+                  <p key={member.id} className="text-sm font-medium">
+                    {member.name}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
             Highest Similarity

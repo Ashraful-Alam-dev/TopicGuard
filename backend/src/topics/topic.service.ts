@@ -428,9 +428,9 @@ export class TopicService {
       }),
       memberIds.length > 0
         ? tx.user.findMany({
-            where: { id: { in: memberIds } },
-            select: MEMBER_SELECT,
-          })
+          where: { id: { in: memberIds } },
+          select: MEMBER_SELECT,
+        })
         : Promise.resolve([]),
     ]);
 
@@ -588,6 +588,7 @@ export class TopicService {
     submissionId: string,
     userId: string,
     title: string,
+    topicId?: string,
   ) {
     await this.submissionService.assertMemberAccess(
       submissionId,
@@ -600,6 +601,7 @@ export class TopicService {
       where: {
         submissionId,
         normalizedTitle,
+        ...(topicId ? { id: { not: topicId } } : {}),
       },
       include: {
         student: {
@@ -740,6 +742,7 @@ export class TopicService {
     submissionId: string,
     userId: string,
     title: string,
+    topicId?: string,
   ): Promise<SimilarityCheckResponseDto> {
     await this.submissionService.assertMemberAccess(
       submissionId,
@@ -752,7 +755,9 @@ export class TopicService {
       where: {
         submissionId,
         normalizedTitle,
-        studentId: { not: userId },
+        ...(topicId
+          ? { id: { not: topicId } }
+          : {}),
       },
       include: {
         student: {

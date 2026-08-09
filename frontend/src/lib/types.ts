@@ -38,6 +38,18 @@ export interface Submission {
   updatedAt: string;
 }
 
+/**
+ * A student attached to a topic, either as the leader (the student who
+ * registered it) or as a team member added by the leader. Mirrors the
+ * subset of `User` the backend embeds on `TopicResponseDto`.
+ */
+export interface TopicMember {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string | null;
+}
+
 export interface Topic {
   id: string;
   submissionId: string;
@@ -49,7 +61,23 @@ export interface Topic {
 
   highestSimilarity: number | null;
   similarTopics: SimilarTopic[];
+
+  /**
+   * Team fields — always present on `TopicResponseDto`. An individual
+   * (non-team) topic simply has `isTeamTopic: false` and `members: []`.
+   * `leader` is the student who registered the topic (== studentId).
+   */
+  leader: TopicMember;
+  members: TopicMember[];
+  isTeamTopic: boolean;
 }
+
+/**
+ * A classroom student who is not yet attached to any topic in this
+ * submission, and can therefore be added as a team member. Returned by
+ * GET /submissions/:submissionId/topics/available-members.
+ */
+export type AvailableTopicMember = TopicMember;
 
 export interface SimilarTopic {
   title: string;

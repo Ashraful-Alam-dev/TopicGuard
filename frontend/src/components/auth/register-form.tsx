@@ -113,7 +113,7 @@ export function RegisterForm() {
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">
-              At least 8 characters, with an uppercase letter, lowercase
+              At least 6 characters, with an uppercase letter, lowercase
               letter, and a number.
             </p>
           )}

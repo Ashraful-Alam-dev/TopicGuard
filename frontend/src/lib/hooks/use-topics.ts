@@ -75,16 +75,18 @@ export function useSubmissionTopics(submissionId: string, enabled = true) {
 export function useTopicAvailability(
   submissionId: string,
   title: string,
+  topicId?: string,
 ) {
   return useQuery({
-    queryKey: topicAvailabilityQueryKey(
-      submissionId,
-      title,
-    ),
+    queryKey: [
+      ...topicAvailabilityQueryKey(submissionId, title),
+      topicId ?? null,
+    ],
     queryFn: () =>
       topicsApi.checkAvailability(
         submissionId,
         title,
+        topicId,
       ),
     enabled:
       !!submissionId &&
@@ -101,7 +103,35 @@ export function useTopicAvailability(
  */
 export function useCheckSimilarity(submissionId: string) {
   return useMutation({
-    mutationFn: (title: string) =>
-      topicsApi.checkSimilarity(submissionId, title),
+    mutationFn: ({
+      title,
+      topicId,
+    }: {
+      title: string
+      topicId?: string
+    }) =>
+      topicsApi.checkSimilarity(
+        submissionId,
+        title,
+        topicId,
+      ),
+  })
+}
+
+export const availableTopicMembersQueryKey = (submissionId: string) =>
+  ["submissions", submissionId, "topics", "available-members"] as const
+
+/**
+ * Classroom students available to add as team members (i.e. not already
+ * attached to a topic in this submission). Only meant to drive the member
+ * picker's UX — the backend re-validates availability on submit, so
+ * `enabled` should be false whenever the picker isn't shown.
+ */
+export function useAvailableTopicMembers(submissionId: string, enabled = true) {
+  return useQuery({
+    queryKey: availableTopicMembersQueryKey(submissionId),
+    queryFn: () => topicsApi.getAvailableMembers(submissionId),
+    enabled: !!submissionId && enabled,
+    staleTime: 5000,
   })
 }

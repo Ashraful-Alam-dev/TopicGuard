@@ -29,6 +29,7 @@ export class TopicSimilarityController {
       dto.submissionId,
       user.id,
       dto.title,
+      dto.topicId,
     );
   }
 }

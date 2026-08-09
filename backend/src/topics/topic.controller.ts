@@ -44,11 +44,13 @@ export class TopicController {
     @CurrentUser() user: User,
     @Param('submissionId', ParseUUIDPipe) submissionId: string,
     @Query('title') title: string,
+    @Query('topicId') topicId?: string,
   ): Promise<CheckTopicResponseDto> {
     return this.topicService.checkTopicAvailability(
       submissionId,
       user.id,
       title,
+      topicId,
     );
   }
 

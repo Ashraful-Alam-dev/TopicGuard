@@ -1,4 +1,4 @@
-import { IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { IsString, IsUUID, IsOptional, MaxLength, MinLength } from 'class-validator';
 
 export class CheckSimilarityDto {
   @IsUUID()
@@ -8,4 +8,8 @@ export class CheckSimilarityDto {
   @MinLength(3)
   @MaxLength(255)
   title!: string;
+
+  @IsOptional()
+  @IsUUID()
+  topicId?: string;
 }

@@ -60,6 +60,7 @@ export function SubmissionTopicsPanel({
           <TableRow>
             <TableHead>Student</TableHead>
             <TableHead>Topic</TableHead>
+            <TableHead>Team</TableHead>
             <TableHead>Highest Similarity</TableHead>
             <TableHead className="text-right">Registered</TableHead>
           </TableRow>
@@ -98,6 +99,29 @@ export function SubmissionTopicsPanel({
                     topics={topic.similarTopics}
                   />
                 </div>
+              </TableCell>
+
+              <TableCell className="align-top">
+                {topic.isTeamTopic ? (
+                  <div className="space-y-1 text-xs">
+                    <p className="text-muted-foreground">
+                      Leader:{" "}
+                      <span className="font-medium text-foreground">
+                        {topic.leader.name}
+                      </span>
+                    </p>
+                    <p className="text-muted-foreground">
+                      Members:{" "}
+                      <span className="font-medium text-foreground">
+                        {topic.members.map((m) => m.name).join(", ")}
+                      </span>
+                    </p>
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    Individual
+                  </span>
+                )}
               </TableCell>
 
               <TableCell className="align-top">
