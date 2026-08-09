@@ -1,5 +1,5 @@
-import { ConflictException, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { Topic } from '@prisma/client';
+import { ConflictException, Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Prisma, Topic } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { SubmissionService } from '../submission/submission.service';
@@ -8,9 +8,32 @@ import { normalizeTitle } from '../common/utils/normalize-title.util';
 import { EmbeddingService } from '../embedding/embedding.service';
 import { TopicVectorRepository } from './topic-vector.repository';
 import { SimilarityCheckResponseDto } from './dto/similarity-check-response.dto';
+import { AvailableMemberDto } from './dto/available-member.dto';
+import { TopicMemberSummary } from './dto/topic-response.dto';
 
 /** Number of matches returned by the semantic similarity check. */
 const SIMILAR_TOPICS_LIMIT = 5;
+
+/** Any Prisma client capable of running queries — the real client or a $transaction callback client. */
+type PrismaExecutor = PrismaService | Prisma.TransactionClient;
+
+const MEMBER_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  avatarUrl: true,
+} satisfies Prisma.UserSelect;
+
+/**
+ * tx.topic.create()/update() only return the raw Topic row (no relations),
+ * but register/update responses need leader+members to reflect the team
+ * that was just saved. This shape carries that alongside the plain Topic
+ * fields so TopicResponseDto can render it directly.
+ */
+type TopicWithTeam = Topic & {
+  leader: TopicMemberSummary;
+  members: TopicMemberSummary[];
+};
 
 @Injectable()
 export class TopicService {
@@ -26,30 +49,47 @@ export class TopicService {
     submissionId: string,
     studentId: string,
     dto: TopicDto,
-  ): Promise<Topic> {
-    await this.submissionService.assertCanRegisterTopic(
+  ): Promise<TopicWithTeam> {
+    const submission = await this.submissionService.assertCanRegisterTopic(
       submissionId,
       studentId,
     );
 
-    const existing = await this.findOwnTopic(submissionId, studentId);
-    if (existing) {
-      throw new ConflictException(
-        'You have already registered a topic for this submission. Edit it instead.',
-      );
-    }
+    const memberIds = this.normalizeMemberIds(dto.memberIds, studentId);
 
     const normalizedTitle = normalizeTitle(dto.title);
-
-    await this.assertNoDuplicateTitle(
-      submissionId,
-      normalizedTitle,
-    );
 
     const embedding =
       await this.embeddingService.generateEmbedding(dto.title.trim());
 
     return this.prisma.$transaction(async (tx) => {
+      // Serialize any concurrent request touching the same
+      // (submission, student) pairs before re-checking availability. See
+      // lockStudentsForSubmission for details/limitations.
+      await this.lockStudentsForSubmission(tx, submissionId, [
+        studentId,
+        ...memberIds,
+      ]);
+
+      await this.assertSubmissionStillOpen(tx, submissionId);
+
+      // Re-check leader + members are not already participating in a
+      // topic under this submission, now that we hold the locks.
+      await this.assertStudentsAvailable(tx, submissionId, [
+        studentId,
+        ...memberIds,
+      ]);
+
+      await this.assertNoDuplicateTitle(tx, submissionId, normalizedTitle);
+
+      if (memberIds.length > 0) {
+        await this.assertMembersBelongToClassroom(
+          tx,
+          submission.classroomId,
+          memberIds,
+        );
+      }
+
       const topic = await tx.topic.create({
         data: {
           submissionId,
@@ -59,13 +99,23 @@ export class TopicService {
         },
       });
 
+      if (memberIds.length > 0) {
+        await tx.topicMember.createMany({
+          data: memberIds.map((memberId) => ({
+            topicId: topic.id,
+            submissionId,
+            studentId: memberId,
+          })),
+        });
+      }
+
       await this.topicVectorRepository.upsertEmbedding(
         tx,
         topic.id,
         embedding,
       );
 
-      return topic;
+      return this.attachTeamInfo(tx, topic, studentId, memberIds);
     });
   }
 
@@ -73,54 +123,90 @@ export class TopicService {
     submissionId: string,
     studentId: string,
     dto: TopicDto,
-  ): Promise<Topic> {
+  ): Promise<TopicWithTeam> {
     await this.submissionService.assertCanRegisterTopic(
       submissionId,
       studentId,
     );
 
-    const topic = await this.findOwnTopic(
-      submissionId,
-      studentId,
-    );
+    const topic = await this.getLeaderTopicOrThrow(submissionId, studentId);
 
-    if (!topic) {
-      throw new NotFoundException(
-        'You have not registered a topic for this submission',
-      );
-    }
+    const memberIds = this.normalizeMemberIds(dto.memberIds, studentId);
 
     const normalizedTitle = normalizeTitle(dto.title);
+    const titleChanged = normalizedTitle !== topic.normalizedTitle;
 
-    await this.assertNoDuplicateTitle(
-      submissionId,
-      normalizedTitle,
-      topic.id,
-    );
-
-    const embedding =
-      await this.embeddingService.generateEmbedding(
-        dto.title.trim(),
-      );
+    const embedding = titleChanged
+      ? await this.embeddingService.generateEmbedding(dto.title.trim())
+      : null;
 
     return this.prisma.$transaction(async (tx) => {
+      await this.lockStudentsForSubmission(tx, submissionId, [
+        studentId,
+        ...memberIds,
+      ]);
+
+      const submission = await this.assertSubmissionStillOpen(
+        tx,
+        submissionId,
+      );
+
+      if (titleChanged) {
+        await this.assertNoDuplicateTitle(
+          tx,
+          submissionId,
+          normalizedTitle,
+          topic.id,
+        );
+      }
+
+      if (memberIds.length > 0) {
+        await this.assertMembersBelongToClassroom(
+          tx,
+          submission.classroomId,
+          memberIds,
+        );
+      }
+
+      // Members already on THIS topic are allowed to stay — excludeTopicId
+      // keeps the check scoped to conflicts with OTHER topics.
+      await this.assertStudentsAvailable(
+        tx,
+        submissionId,
+        memberIds,
+        topic.id,
+      );
+
       const updated = await tx.topic.update({
-        where: {
-          id: topic.id,
-        },
+        where: { id: topic.id },
         data: {
           originalTitle: dto.title,
           normalizedTitle,
         },
       });
 
-      await this.topicVectorRepository.upsertEmbedding(
-        tx,
-        updated.id,
-        embedding,
-      );
+      // Simplest safe way to sync membership: replace the set. Cheap given
+      // team sizes are small, and keeps this transactional.
+      await tx.topicMember.deleteMany({ where: { topicId: topic.id } });
+      if (memberIds.length > 0) {
+        await tx.topicMember.createMany({
+          data: memberIds.map((memberId) => ({
+            topicId: topic.id,
+            submissionId,
+            studentId: memberId,
+          })),
+        });
+      }
 
-      return updated;
+      if (titleChanged && embedding) {
+        await this.topicVectorRepository.upsertEmbedding(
+          tx,
+          updated.id,
+          embedding,
+        );
+      }
+
+      return this.attachTeamInfo(tx, updated, studentId, memberIds);
     });
   }
 
@@ -133,21 +219,14 @@ export class TopicService {
       studentId,
     );
 
-    const topic = await this.findOwnTopic(
-      submissionId,
-      studentId,
-    );
+    const topic = await this.getLeaderTopicOrThrow(submissionId, studentId);
 
-    if (!topic) {
-      throw new NotFoundException(
-        'You have not registered a topic for this submission',
-      );
-    }
-
-    await this.prisma.topic.delete({
-      where: {
-        id: topic.id,
-      },
+    // TopicMember.topic has onDelete: Cascade in schema.prisma, so deleting
+    // the topic frees up all its members automatically. Deleting inside a
+    // transaction anyway keeps this robust if that cascade is ever changed.
+    await this.prisma.$transaction(async (tx) => {
+      await tx.topicMember.deleteMany({ where: { topicId: topic.id } });
+      await tx.topic.delete({ where: { id: topic.id } });
     });
   }
 
@@ -166,13 +245,266 @@ export class TopicService {
     );
   }
 
-  private async findOwnTopic(
+  /**
+   * Returns classroom members eligible to be added as team members: they
+   * belong to the classroom, aren't already leading or participating in
+   * another topic under this submission, and aren't the requester
+   * themselves (who is, or would become, the leader — not a "member").
+   *
+   * There is no invitation system: adding someone here makes them an
+   * immediately-confirmed member.
+   */
+  async getAvailableMembers(
+    submissionId: string,
+    requesterId: string,
+  ): Promise<AvailableMemberDto[]> {
+    const submission = await this.submissionService.assertMemberAccess(
+      submissionId,
+      requesterId,
+    );
+
+    const [classroomMembers, leaderRows, memberRows] = await Promise.all([
+      this.prisma.classroomMember.findMany({
+        where: { classroomId: submission.classroomId },
+        select: { user: { select: MEMBER_SELECT } },
+      }),
+      this.prisma.topic.findMany({
+        where: { submissionId },
+        select: { studentId: true },
+      }),
+      this.prisma.topicMember.findMany({
+        where: { submissionId },
+        select: { studentId: true },
+      }),
+    ]);
+
+    const takenIds = new Set<string>([
+      ...leaderRows.map((r) => r.studentId),
+      ...memberRows.map((r) => r.studentId),
+      requesterId,
+    ]);
+
+    return classroomMembers
+      .map((cm) => cm.user)
+      .filter((user) => !takenIds.has(user.id))
+      .map((user) => AvailableMemberDto.fromEntity(user));
+  }
+
+  // -----------------------------------------------------------------------
+  // Membership / availability helpers
+  // -----------------------------------------------------------------------
+
+  /**
+   * The leader may include their own id in memberIds by mistake — that's a
+   * request error, not a silent no-op, since the leader/member distinction
+   * matters (e.g. what "isTeamTopic" means). class-validator's @ArrayUnique
+   * already rejects duplicate ids within the array itself.
+   */
+  private normalizeMemberIds(
+    memberIds: string[] | undefined,
+    leaderId: string,
+  ): string[] {
+    const ids = memberIds ?? [];
+    if (ids.includes(leaderId)) {
+      throw new BadRequestException(
+        'The topic leader cannot also be added as a team member',
+      );
+    }
+    return ids;
+  }
+
+  /**
+   * Verifies none of the given students already participate (as leader or
+   * member) in a DIFFERENT topic under this submission. Pass excludeTopicId
+   * when editing so the current topic's own leader/members aren't flagged
+   * as conflicting with themselves.
+   *
+   * Must be called after lockStudentsForSubmission inside the same
+   * transaction so the read reflects any concurrently-committing writes.
+   */
+  private async assertStudentsAvailable(
+    tx: Prisma.TransactionClient,
+    submissionId: string,
+    studentIds: string[],
+    excludeTopicId?: string,
+  ): Promise<void> {
+    const uniqueIds = [...new Set(studentIds)];
+    if (uniqueIds.length === 0) {
+      return;
+    }
+
+    const [leaderConflict, memberConflict] = await Promise.all([
+      tx.topic.findFirst({
+        where: {
+          submissionId,
+          studentId: { in: uniqueIds },
+          ...(excludeTopicId ? { id: { not: excludeTopicId } } : {}),
+        },
+        select: { student: { select: { name: true } } },
+      }),
+      tx.topicMember.findFirst({
+        where: {
+          submissionId,
+          studentId: { in: uniqueIds },
+          ...(excludeTopicId ? { topicId: { not: excludeTopicId } } : {}),
+        },
+        select: { student: { select: { name: true } } },
+      }),
+    ]);
+
+    const conflict = leaderConflict ?? memberConflict;
+    if (conflict) {
+      throw new ConflictException(
+        `${conflict.student.name} is already participating in another topic for this submission`,
+      );
+    }
+  }
+
+  private async assertMembersBelongToClassroom(
+    tx: Prisma.TransactionClient,
+    classroomId: string,
+    memberIds: string[],
+  ): Promise<void> {
+    const memberships = await tx.classroomMember.findMany({
+      where: { classroomId, userId: { in: memberIds } },
+      select: { userId: true },
+    });
+
+    const validIds = new Set(memberships.map((m) => m.userId));
+    const invalid = memberIds.filter((id) => !validIds.has(id));
+
+    if (invalid.length > 0) {
+      throw new BadRequestException(
+        'One or more selected members do not belong to this classroom',
+      );
+    }
+  }
+
+  /**
+   * Race-condition guard: "a student cannot belong to two topics under the
+   * same submission" spans two tables (Topic.studentId for leaders,
+   * TopicMember.studentId for members), so a single cross-table unique
+   * constraint isn't possible without a larger schema redesign (e.g. a
+   * unified participants table). Instead, before re-checking availability
+   * we take a Postgres transaction-scoped advisory lock per
+   * (submissionId, studentId) pair, sorted for a stable lock order so two
+   * overlapping team registrations can't deadlock each other.
+   *
+   * This serializes concurrent register/edit requests that touch the same
+   * student in the same submission, which is sufficient to close the race
+   * in practice. Limitation: pg_advisory_xact_lock keys on hashtext(), so a
+   * hash collision between two different (submissionId, studentId) pairs
+   * would cause unrelated requests to serialize against each other
+   * (a performance cost, not a correctness issue — it never allows the
+   * invariant to be violated).
+   */
+  private async lockStudentsForSubmission(
+    tx: Prisma.TransactionClient,
+    submissionId: string,
+    studentIds: string[],
+  ): Promise<void> {
+    const sortedUniqueIds = [...new Set(studentIds)].sort();
+    for (const studentId of sortedUniqueIds) {
+      const lockKey = `${submissionId}:${studentId}`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
+    }
+  }
+
+  /**
+   * tx.topic.create()/update() return the bare Topic row. This fetches the
+   * leader and current members (by id, within the same transaction) so
+   * register/update responses reflect the team that was just saved.
+   */
+  private async attachTeamInfo(
+    tx: Prisma.TransactionClient,
+    topic: Topic,
+    leaderId: string,
+    memberIds: string[],
+  ): Promise<TopicWithTeam> {
+    const [leader, members] = await Promise.all([
+      tx.user.findUniqueOrThrow({
+        where: { id: leaderId },
+        select: MEMBER_SELECT,
+      }),
+      memberIds.length > 0
+        ? tx.user.findMany({
+            where: { id: { in: memberIds } },
+            select: MEMBER_SELECT,
+          })
+        : Promise.resolve([]),
+    ]);
+
+    return { ...topic, leader, members };
+  }
+
+  private async assertSubmissionStillOpen(
+    tx: Prisma.TransactionClient,
+    submissionId: string,
+  ) {
+    const submission = await tx.submission.findUnique({
+      where: { id: submissionId },
+    });
+
+    if (!submission) {
+      throw new NotFoundException('Submission not found');
+    }
+
+    if (!submission.isOpen) {
+      throw new ForbiddenException(
+        'This submission is closed and no longer accepts topic changes',
+      );
+    }
+
+    return submission;
+  }
+
+  // -----------------------------------------------------------------------
+  // Lookups
+  // -----------------------------------------------------------------------
+
+  /** Leader-only lookup, used by update/delete which are leader-restricted. */
+  private async getLeaderTopicOrThrow(
     submissionId: string,
     studentId: string,
-  ): Promise<Topic | null> {
-    return this.prisma.topic.findUnique({
+  ): Promise<Topic> {
+    const leaderTopic = await this.prisma.topic.findUnique({
       where: {
         uq_submission_student: { submissionId, studentId },
+      },
+    });
+
+    if (leaderTopic) {
+      return leaderTopic;
+    }
+
+    const asMember = await this.prisma.topicMember.findFirst({
+      where: { submissionId, studentId },
+    });
+
+    if (asMember) {
+      throw new ForbiddenException(
+        'Only the topic leader can perform this action',
+      );
+    }
+
+    throw new NotFoundException(
+      'You have not registered a topic for this submission',
+    );
+  }
+
+  /** Leader OR member lookup, used by getOwnTopic (everyone on the team views the same topic). */
+  private async findParticipantTopic(
+    submissionId: string,
+    studentId: string,
+  ) {
+    return this.prisma.topic.findFirst({
+      where: {
+        submissionId,
+        OR: [{ studentId }, { members: { some: { studentId } } }],
+      },
+      include: {
+        student: { select: MEMBER_SELECT },
+        members: { include: { student: { select: MEMBER_SELECT } } },
       },
     });
   }
@@ -181,10 +513,7 @@ export class TopicService {
     submissionId: string,
     studentId: string,
   ) {
-    const topic = await this.findOwnTopic(
-      submissionId,
-      studentId,
-    );
+    const topic = await this.findParticipantTopic(submissionId, studentId);
 
     if (!topic) {
       throw new NotFoundException(
@@ -213,8 +542,12 @@ export class TopicService {
         similarityScore: m.similarity,
       }));
 
+    const { student, members, ...rest } = topic;
+
     return {
-      ...topic,
+      ...rest,
+      leader: student as TopicMemberSummary,
+      members: members.map((m) => m.student as TopicMemberSummary),
       highestSimilarity:
         similarTopics.length > 0
           ? similarTopics[0].similarityScore
@@ -224,11 +557,12 @@ export class TopicService {
   }
 
   private async assertNoDuplicateTitle(
+    executor: PrismaExecutor,
     submissionId: string,
     normalizedTitle: string,
     excludeTopicId?: string,
   ) {
-    const duplicate = await this.prisma.topic.findFirst({
+    const duplicate = await executor.topic.findFirst({
       where: {
         submissionId,
         normalizedTitle,
@@ -323,6 +657,8 @@ export class TopicService {
         'embedding.similarityThreshold',
       ) ?? 0.3;
 
+    // One row per Topic — teams are never split across rows, so the
+    // monitor sees each topic (individual or team) exactly once.
     const topics = await this.prisma.topic.findMany({
       where: {
         submissionId,
@@ -334,6 +670,13 @@ export class TopicService {
             name: true,
             email: true,
             avatarUrl: true,
+          },
+        },
+        members: {
+          include: {
+            student: {
+              select: MEMBER_SELECT,
+            },
           },
         },
       },
@@ -360,8 +703,12 @@ export class TopicService {
             similarityScore: m.similarity,
           }));
 
+        const { members, ...rest } = topic;
+
         return {
-          ...topic,
+          ...rest,
+          leader: topic.student,
+          members: members.map((m) => m.student),
           highestSimilarity:
             similarTopics.length > 0
               ? similarTopics[0].similarityScore

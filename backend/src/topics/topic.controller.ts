@@ -17,6 +17,7 @@ import { TopicDto } from './dto/topic.dto';
 import { TopicResponseDto } from './dto/topic-response.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CheckTopicResponseDto } from './dto/check-topic-response.dto';
+import { AvailableMemberDto } from './dto/available-member.dto';
 
 @Controller('submissions/:submissionId/topics')
 export class TopicController {
@@ -49,6 +50,15 @@ export class TopicController {
       user.id,
       title,
     );
+  }
+
+  @Get('available-members')
+  @HttpCode(HttpStatus.OK)
+  async getAvailableMembers(
+    @CurrentUser() user: User,
+    @Param('submissionId', ParseUUIDPipe) submissionId: string,
+  ): Promise<AvailableMemberDto[]> {
+    return this.topicService.getAvailableMembers(submissionId, user.id);
   }
 
   @Get('me')

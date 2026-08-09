@@ -1,5 +1,12 @@
 import { Topic } from '@prisma/client';
 
+export interface TopicMemberSummary {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+}
+
 // Define a type for topics that include the vector similarity payload
 export type TopicWithSimilarity = Topic & {
   highestSimilarity?: number | null;
@@ -8,6 +15,11 @@ export type TopicWithSimilarity = Topic & {
     studentName: string | null;
     similarityScore: number;
   }>;
+  // Present once a topic is enriched with team info (register/update/get/
+  // monitor list). studentId above always remains the leader's id — these
+  // are the same person, exposed in a friendlier shape for the frontend.
+  leader?: TopicMemberSummary;
+  members?: TopicMemberSummary[];
 };
 
 export class TopicResponseDto {
@@ -26,6 +38,12 @@ export class TopicResponseDto {
     similarityScore: number;
   }>;
 
+  // Team fields. leader mirrors studentId/originalTitle's owner; members is
+  // empty for an individual topic (no team added).
+  leader?: TopicMemberSummary;
+  members!: TopicMemberSummary[];
+  isTeamTopic!: boolean;
+
   private constructor(topic: TopicWithSimilarity) {
     this.id = topic.id;
     this.submissionId = topic.submissionId;
@@ -38,6 +56,10 @@ export class TopicResponseDto {
     // Map the extra calculated properties!
     this.highestSimilarity = topic.highestSimilarity ?? null;
     this.similarTopics = topic.similarTopics ?? [];
+
+    this.leader = topic.leader;
+    this.members = topic.members ?? [];
+    this.isTeamTopic = this.members.length > 0;
   }
 
   static fromEntity(topic: TopicWithSimilarity): TopicResponseDto {

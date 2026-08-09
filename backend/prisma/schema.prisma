@@ -20,6 +20,7 @@ model User {
   classroomMemberships ClassroomMember[]
   topics               Topic[]
   sentMessages         Message[]
+  topicMemberships     TopicMember[]
 
   @@map("users")
 }
@@ -102,7 +103,8 @@ model Submission {
 
   classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 
-  topics Topic[]
+  topics       Topic[]
+  topicMembers TopicMember[]
 
   @@index([classroomId])
   @@map("submissions")
@@ -125,9 +127,34 @@ model Topic {
   submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
+  members TopicMember[]
+
   @@unique([submissionId, studentId], name: "uq_submission_student")
   @@index([submissionId])
   @@index([studentId])
   @@index([submissionId, normalizedTitle])
   @@map("topics")
+}
+
+model TopicMember {
+  id           String @id @default(uuid()) @db.Uuid
+  topicId      String @map("topic_id") @db.Uuid
+  // Denormalized from Topic.submissionId. This lets the database itself
+  // enforce "a student can only be a member of one topic per submission"
+  // via the uq_submission_member unique index below, instead of relying
+  // purely on application-level checks.
+  submissionId String @map("submission_id") @db.Uuid
+  studentId    String @map("student_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  topic      Topic      @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([topicId, studentId], name: "uq_topic_member")
+  @@unique([submissionId, studentId], name: "uq_submission_member")
+  @@index([studentId])
+  @@index([submissionId])
+  @@map("topic_members")
 }
