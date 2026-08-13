@@ -432,17 +432,25 @@ export function TopicPanel({ submission }: { submission: Submission }) {
               {topic ? "Edit your topic" : "Register your topic"}
             </Label>
 
-            <Input
-              id="topic-title"
-              placeholder="e.g. Real-time collaborative editing with CRDTs"
-              aria-invalid={!!errors.title}
-              className="pr-24"
-              {...register("title", {
-                onChange: (e) => {
+            <div className="relative">
+              <Input
+                id="topic-title"
+                placeholder="e.g. Real-time collaborative editing with CRDTs"
+                aria-invalid={!!errors.title}
+                className="pr-24"
+                {...register("title")}
+                value={title}
+                onChange={(e) => {
                   setTitle(e.target.value)
-                },
-              })}
-            />
+                }}
+              />
+              <ConsultAiButton
+                active={consultAiActive}
+                isPending={consultAi.isPending}
+                cooldownRemaining={cooldownRemaining}
+                onClick={handleConsultAi}
+              />
+            </div>
 
             {errors.title && (
               <p className="text-xs text-destructive">
@@ -480,6 +488,7 @@ export function TopicPanel({ submission }: { submission: Submission }) {
                 </>
               )}
           </div>
+
 
           {(consultResult || consultError) && (
             <ConsultAiCard

@@ -137,12 +137,12 @@ model Topic {
 }
 
 model TopicMember {
-  id           String @id @default(uuid()) @db.Uuid
-  topicId      String @map("topic_id") @db.Uuid
-  // Denormalized from Topic.submissionId. This lets the database itself
-  // enforce "a student can only be a member of one topic per submission"
-  // via the uq_submission_member unique index below, instead of relying
-  // purely on application-level checks.
+  id      String @id @default(uuid()) @db.Uuid
+  topicId String @map("topic_id") @db.Uuid
+
+  // Denormalized from Topic.submissionId.
+  // Allows the database to enforce that a student
+  // can belong to only one topic per submission.
   submissionId String @map("submission_id") @db.Uuid
   studentId    String @map("student_id") @db.Uuid
 
@@ -157,4 +157,36 @@ model TopicMember {
   @@index([studentId])
   @@index([submissionId])
   @@map("topic_members")
+}
+
+model VerificationToken {
+  id String @id @default(uuid()) @db.Uuid
+
+  email String @db.VarChar(255)
+
+  // REGISTRATION or PASSWORD_RESET
+  type String @db.VarChar(30)
+
+  // Used only for pending registration.
+  // Null for password reset.
+  name String? @db.VarChar(100)
+
+  // Password hash for pending registration.
+  // Null for password reset.
+  passwordHash String? @map("password_hash")
+
+  // Store only the hashed OTP, never the plaintext OTP.
+  otpHash String @map("otp_hash")
+
+  expiresAt DateTime @map("expires_at")
+
+  attempts Int @default(0)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([email, type], name: "uq_verification_email_type")
+  @@index([email])
+  @@index([expiresAt])
+  @@map("verification_tokens")
 }

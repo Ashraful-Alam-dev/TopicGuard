@@ -1,10 +1,10 @@
 "use client"
 
+import * as React from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 import { Loader2, Lock, Mail, User } from "lucide-react"
 import { toast } from "sonner"
 
@@ -13,12 +13,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { authApi } from "@/lib/api/auth"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { AUTH_QUERY_KEY } from "@/lib/hooks/use-auth"
 import { registerSchema, type RegisterFormValues } from "@/lib/validation/auth"
+import { RegisterOtpForm } from "@/components/auth/register-otp-form"
 
 export function RegisterForm() {
-  const router = useRouter()
-  const queryClient = useQueryClient()
+  const [pendingEmail, setPendingEmail] = React.useState<string | null>(null)
 
   const {
     register,
@@ -31,14 +30,22 @@ export function RegisterForm() {
   const mutation = useMutation({
     mutationFn: authApi.register,
     onSuccess: (data) => {
-      queryClient.setQueryData(AUTH_QUERY_KEY, data.user)
-      toast.success("Account created")
-      router.push("/dashboard")
+      toast.success("Check your email for a verification code")
+      setPendingEmail(data.email)
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error))
     },
   })
+
+  if (pendingEmail) {
+    return (
+      <RegisterOtpForm
+        email={pendingEmail}
+        onBack={() => setPendingEmail(null)}
+      />
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6">

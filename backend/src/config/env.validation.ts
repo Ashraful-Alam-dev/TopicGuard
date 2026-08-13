@@ -80,6 +80,21 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   GROQ_BASE_URL?: string;
+
+  // Brevo (transactional email) — optional at the env-validation layer so
+  // the app still boots without it; EmailService itself warns/refuses to
+  // send if these are missing, since OTP flows genuinely need them.
+  @IsOptional()
+  @IsString()
+  BREVO_API_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  BREVO_SENDER_EMAIL?: string;
+
+  @IsOptional()
+  @IsString()
+  BREVO_SENDER_NAME?: string;
 }
 
 export function validate(config: Record<string, unknown>) {

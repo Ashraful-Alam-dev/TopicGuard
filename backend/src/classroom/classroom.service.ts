@@ -291,6 +291,49 @@ export class ClassroomService {
     return this.getForMutation(classroomId, userId);
   }
 
+  /**
+   * All classroom recipients for email notifications: the monitor plus
+   * every member, deduped by user id (the monitor is also a
+   * ClassroomMember row - see create() above - so without dedup they'd
+   * receive the same notification twice).
+   */
+  async getRecipients(
+    classroomId: string,
+  ): Promise<{ id: string; name: string; email: string }[]> {
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: classroomId },
+      include: {
+        monitor: true,
+        members: { include: { user: true } },
+      },
+    });
+
+    if (!classroom) {
+      throw new NotFoundException('Classroom not found');
+    }
+
+    const recipients = new Map<
+      string,
+      { id: string; name: string; email: string }
+    >();
+
+    recipients.set(classroom.monitor.id, {
+      id: classroom.monitor.id,
+      name: classroom.monitor.name,
+      email: classroom.monitor.email,
+    });
+
+    for (const member of classroom.members) {
+      recipients.set(member.user.id, {
+        id: member.user.id,
+        name: member.user.name,
+        email: member.user.email,
+      });
+    }
+
+    return [...recipients.values()];
+  }
+
   private async generateUniqueJoinCode(): Promise<string> {
     for (let attempt = 0; attempt < MAX_JOIN_CODE_ATTEMPTS; attempt++) {
       const code = generateJoinCode();

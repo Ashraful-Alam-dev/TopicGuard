@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const AUTH_COOKIE = "access_token";
 const AUTH_ROUTES = ["/login", "/register"];
-const PUBLIC_ROUTES = [...AUTH_ROUTES];
+const PUBLIC_ROUTES = [...AUTH_ROUTES, "/forgot-password"];
 
 /**
  * Lightweight route gate based on cookie presence only (no signature

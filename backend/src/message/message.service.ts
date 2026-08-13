@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { Message } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { ClassroomService } from '../classroom/classroom.service';
+import { EmailService } from '../email/email.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 
 @Injectable()
@@ -9,12 +10,14 @@ export class MessageService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly classroomService: ClassroomService,
+    private readonly emailService: EmailService,
   ) {}
 
   /**
    * Sends an announcement-style message to a classroom. Only the current
    * monitor may send messages, and only to a non-archived classroom
-   * (mirrors SubmissionService's create-time checks).
+   * (mirrors SubmissionService's create-time checks). Every classroom
+   * member (including the monitor) is emailed a best-effort notification.
    */
   async create(
     classroomId: string,
@@ -27,7 +30,7 @@ export class MessageService {
     );
     this.assertNotArchived(classroom.isArchived);
 
-    return this.prisma.message.create({
+    const message = await this.prisma.message.create({
       data: {
         classroomId,
         senderId: monitorId,
@@ -35,6 +38,15 @@ export class MessageService {
         content: dto.content,
       },
     });
+
+    const recipients = await this.classroomService.getRecipients(classroomId);
+    await this.emailService.sendAnnouncementNotification(
+      recipients,
+      classroom.name,
+      message.title,
+    );
+
+    return message;
   }
 
   async findAllForClassroom(

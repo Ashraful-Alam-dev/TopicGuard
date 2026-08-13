@@ -7,6 +7,7 @@ import {
 import { Submission } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { ClassroomService } from '../classroom/classroom.service';
+import { EmailService } from '../email/email.service';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { UpdateSubmissionDto } from './dto/update-submission.dto';
 
@@ -15,6 +16,7 @@ export class SubmissionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly classroomService: ClassroomService,
+    private readonly emailService: EmailService,
   ) {}
 
   async create(
@@ -29,7 +31,7 @@ export class SubmissionService {
     this.assertNotArchived(classroom.isArchived);
     this.assertValidDateRange(dto.openDate, dto.closeDate);
 
-    return this.prisma.submission.create({
+    const submission = await this.prisma.submission.create({
       data: {
         classroomId,
         title: dto.title,
@@ -38,6 +40,10 @@ export class SubmissionService {
         closeDate: new Date(dto.closeDate),
       },
     });
+
+    await this.notifySubmissionOpen(classroom.id, classroom.name, submission.title);
+
+    return submission;
   }
 
   async findAllForClassroom(
@@ -93,10 +99,17 @@ export class SubmissionService {
       throw new BadRequestException('Submission is already open');
     }
 
-    return this.prisma.submission.update({
+    const updated = await this.prisma.submission.update({
       where: { id },
       data: { isOpen: true },
     });
+
+    const classroom = await this.classroomService.getRawById(
+      submission.classroomId,
+    );
+    await this.notifySubmissionOpen(classroom.id, classroom.name, updated.title);
+
+    return updated;
   }
 
   async close(id: string, userId: string): Promise<Submission> {
@@ -161,6 +174,23 @@ export class SubmissionService {
     }
 
     return submission;
+  }
+
+  /**
+   * Best-effort: EmailService swallows individual delivery failures, so
+   * this never blocks or fails the submission create/open action itself.
+   */
+  private async notifySubmissionOpen(
+    classroomId: string,
+    classroomName: string,
+    submissionTitle: string,
+  ): Promise<void> {
+    const recipients = await this.classroomService.getRecipients(classroomId);
+    await this.emailService.sendSubmissionOpenNotification(
+      recipients,
+      classroomName,
+      submissionTitle,
+    );
   }
 
   private async getRawById(id: string): Promise<Submission> {

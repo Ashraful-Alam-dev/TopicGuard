@@ -26,6 +26,24 @@ export interface AuthResponse {
   user: User;
 }
 
+/**
+ * Response from POST /auth/register while OTP verification is pending —
+ * no session is established yet, so no accessToken/user is returned.
+ */
+export interface RegisterPendingResponse {
+  email: string;
+  message: string;
+}
+
+/**
+ * Response shape returned by GET /users/me. Extends the base `User` with
+ * classroom counts for display on the Profile page.
+ */
+export interface UserProfile extends User {
+  classroomsAsMonitor: number;
+  classroomsAsStudent: number;
+}
+
 export interface Submission {
   id: string;
   classroomId: string;

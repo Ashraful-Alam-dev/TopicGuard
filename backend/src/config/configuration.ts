@@ -10,6 +10,11 @@ export default () => ({
   cookie: {
     secure: process.env.COOKIE_SECURE === 'true',
   },
+  brevo: {
+    apiKey: process.env.BREVO_API_KEY,
+    senderEmail: process.env.BREVO_SENDER_EMAIL,
+    senderName: process.env.BREVO_SENDER_NAME,
+  },
   embedding: {
     provider: process.env.EMBEDDING_PROVIDER ?? 'transformers',
     transformerModel: process.env.TRANSFORMER_MODEL,

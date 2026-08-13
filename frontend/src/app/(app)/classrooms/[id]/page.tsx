@@ -36,7 +36,7 @@ export default function ClassroomDetailPage({
         className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-3.5" />
-        All classrooms
+        back
       </Link>
 
       {isLoading ? (
