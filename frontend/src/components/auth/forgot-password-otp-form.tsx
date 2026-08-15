@@ -3,9 +3,10 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation } from "@tanstack/react-query"
-import { KeyRound, Loader2 } from "lucide-react"
+import { KeyRound, Loader2, MailQuestion } from "lucide-react"
 import { toast } from "sonner"
 
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -72,6 +73,15 @@ export function ForgotPasswordOtpForm({
           <span className="font-medium text-foreground">{email}</span>.
         </p>
       </div>
+
+      <Alert>
+        <MailQuestion />
+        <AlertDescription>
+          If you do not receive the email within a few minutes, please check
+          your Spam folder. If you still do not receive it, please contact
+          us.
+        </AlertDescription>
+      </Alert>
 
       <form
         onSubmit={handleSubmit((values) => verifyMutation.mutate(values))}

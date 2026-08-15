@@ -55,7 +55,7 @@ export function TopicSimilarityCard({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-xs text-muted-foreground">
-                Team Leader
+                Team leader
               </p>
               <p className="mt-1 text-sm font-medium">
                 {topic.leader.name}
@@ -64,7 +64,7 @@ export function TopicSimilarityCard({
 
             <div>
               <p className="text-xs text-muted-foreground">
-                Team Members
+                Team members
               </p>
               <div className="mt-1 flex flex-col gap-0.5">
                 {topic.members.map((member) => (
@@ -79,7 +79,7 @@ export function TopicSimilarityCard({
 
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
-            Highest Similarity
+            Highest similarity
           </span>
 
           <TopicSimilarityBadge

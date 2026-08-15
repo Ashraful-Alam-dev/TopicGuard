@@ -1,6 +1,7 @@
 import {
   Injectable,
   InternalServerErrorException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
@@ -38,6 +39,12 @@ export class EmbeddingService {
   }
 
   async generateEmbedding(text: string): Promise<number[]> {
+    if (this.provider.isReady && !this.provider.isReady()) {
+      throw new ServiceUnavailableException(
+        'Similarity checking is still starting up. Please try again in a moment.',
+      );
+    }
+
     const embedding = await this.provider.generateEmbedding(text.trim());
 
     if (embedding.length !== EMBEDDING_DIMENSIONS) {

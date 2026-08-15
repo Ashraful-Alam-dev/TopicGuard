@@ -54,11 +54,11 @@ export default function ProfilePage() {
                 <AvatarFallback>{getInitials(profile.name)}</AvatarFallback>
               </Avatar>
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">
+                <p className="truncate text-lg font-semibold text-foreground">
                   {profile.name}
                 </p>
-                <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
-                  <Mail className="size-3.5 shrink-0" />
+                <p className="flex items-center gap-1.5 truncate text-base text-muted-foreground">
+                  <Mail className="size-4 shrink-0" />
                   {profile.email}
                 </p>
               </div>

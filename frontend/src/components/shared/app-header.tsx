@@ -47,6 +47,14 @@ export function AppHeader() {
         </Link>
 
         <div className="flex items-center gap-1.5">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="hidden sm:inline-flex"
+          >
+            <Link href="/about">About</Link>
+          </Button>
           <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger className="ml-1 rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50">

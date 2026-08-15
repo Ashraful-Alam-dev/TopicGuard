@@ -55,14 +55,12 @@ export class AuthService {
       throw new ConflictException('An account with this email already exists');
     }
 
-    const existingToken = await this.findVerificationToken(
-      dto.email,
-      VerificationTokenType.REGISTRATION,
-    );
-    this.assertResendAllowed(existingToken);
-
     const passwordHash = await hashSecret(dto.password);
 
+    // If a pending registration already exists for this email (e.g. the
+    // user abandoned a previous sign-up attempt), issueVerificationToken's
+    // upsert replaces it entirely with this newer request - no separate
+    // "existing token" check needed here.
     const otp = await this.issueVerificationToken({
       email: dto.email,
       type: VerificationTokenType.REGISTRATION,
