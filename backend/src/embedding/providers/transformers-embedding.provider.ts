@@ -21,8 +21,7 @@ type EmbeddingPipeline = (
 
 @Injectable()
 export class TransformersEmbeddingProvider
-  implements EmbeddingProvider, OnModuleInit
-{
+  implements EmbeddingProvider, OnModuleInit {
   readonly name = 'transformers';
 
   private readonly logger = new Logger(TransformersEmbeddingProvider.name);
@@ -36,16 +35,9 @@ export class TransformersEmbeddingProvider
    */
   private ready = false;
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly configService: ConfigService) { }
 
-  /**
-   * Deliberately NOT awaited. Nest awaits every module's onModuleInit
-   * before the app starts listening, so awaiting the (slow, first-load)
-   * model download here would delay the whole server - including
-   * unrelated routes like /health and login - by however long the model
-   * takes to load. Instead we kick off loading in the background and let
-   * EmbeddingService gate only the routes that actually need it.
-   */
+  /** Deliberately NOT awaited. */
   onModuleInit(): void {
     void this.loadModel();
   }
@@ -59,6 +51,8 @@ export class TransformersEmbeddingProvider
       this.configService.get<string>('embedding.transformerModel') ??
       'Xenova/all-MiniLM-L6-v2';
 
+    const start = Date.now();
+
     this.logger.log(`Loading embedding model: ${model}`);
 
     try {
@@ -68,7 +62,9 @@ export class TransformersEmbeddingProvider
       )) as unknown as EmbeddingPipeline;
 
       this.ready = true;
-      this.logger.log('Embedding model loaded.');
+      this.logger.log(
+        `Embedding model loaded in ${Date.now() - start} ms`,
+      );
     } catch (error) {
       this.logger.error('Failed to load embedding model', error as Error);
     }

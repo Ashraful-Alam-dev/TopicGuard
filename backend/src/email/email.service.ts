@@ -17,12 +17,7 @@ export interface EmailRecipient {
   name?: string;
 }
 
-/**
- * Thin wrapper around Brevo's transactional email API. Nothing in the
- * rest of the app talks to Brevo directly - callers only see
- * intention-revealing methods (sendRegistrationOtp, sendPasswordResetOtp,
- * sendSubmissionOpenNotification, sendAnnouncementNotification).
- */
+/** Thin wrapper around Brevo's transactional email API. */
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);

@@ -14,8 +14,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TopicGuard",
-  description: "Register project topics and let TopicGuard catch duplicates before they happen.",
+  metadataBase: new URL("https://your-domain.vercel.app"), // replace with your real domain
+  title: {
+    default: "TopicGuard — Duplicate Topic Detection",
+    template: "%s | TopicGuard",
+  },
+  description:
+    "Register project topics and let TopicGuard catch duplicates before they happen.",
+  keywords: ["topic registration", "duplicate detection", "project topics", "classroom management"],
+  openGraph: {
+    title: "TopicGuard",
+    description: "Register project topics and let TopicGuard catch duplicates before they happen.",
+    url: "https://your-domain.vercel.app",
+    siteName: "TopicGuard",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "TopicGuard",
+    description: "Register project topics and let TopicGuard catch duplicates before they happen.",
+  },
 };
 
 export default function RootLayout({

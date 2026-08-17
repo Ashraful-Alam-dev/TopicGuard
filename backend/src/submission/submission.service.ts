@@ -125,9 +125,7 @@ export class SubmissionService {
     });
   }
 
-  // ---------------------------------------------------------------------
   // Reusable access-control helpers for TopicService.
-  // ---------------------------------------------------------------------
 
   /**
    * Asserts the user can read this submission (any classroom member).

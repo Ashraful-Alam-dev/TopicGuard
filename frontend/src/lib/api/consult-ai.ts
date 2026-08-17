@@ -7,12 +7,7 @@ export interface ConsultAiPayload {
 }
 
 export const consultAiApi = {
-  /**
-   * POST /topics/consult-ai — sits next to checkSimilarity in the flat
-   * /topics namespace (see ConsultAiController). Optional/non-blocking by
-   * design: callers are expected to catch failures and degrade gracefully
-   * rather than surface them as a hard error.
-   */
+  /** POST /topics/consult-ai — sits next to checkSimilarity in the flat /topics namespace (see ConsultAiController). */
   evaluate: (payload: ConsultAiPayload) =>
     apiClient
       .post<ConsultAiResult>("/topics/consult-ai", payload)

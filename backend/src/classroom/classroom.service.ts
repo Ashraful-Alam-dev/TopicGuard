@@ -29,12 +29,7 @@ const MAX_JOIN_CODE_ATTEMPTS = 5;
 export class ClassroomService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Creates a classroom, assigns the creator as monitor, and adds them as a
-   * member so classroom listing/membership queries stay consistent (every
-   * user, including monitors, is also a student per the product's business
-   * rules).
-   */
+  /** Creates a classroom, assigns the creator as monitor, and adds them as a member so classroom listing/membership queries stay consistent (every user, including monitors, is also a student per the product's business rules). */
   async create(monitorId: string, dto: CreateClassroomDto) {
     const joinCode = await this.generateUniqueJoinCode();
 
@@ -291,12 +286,7 @@ export class ClassroomService {
     return this.getForMutation(classroomId, userId);
   }
 
-  /**
-   * All classroom recipients for email notifications: the monitor plus
-   * every member, deduped by user id (the monitor is also a
-   * ClassroomMember row - see create() above - so without dedup they'd
-   * receive the same notification twice).
-   */
+  /** All classroom recipients for email notifications: the monitor plus every member, deduped by user id (the monitor is also a ClassroomMember row - see create() above - so without dedup they'd receive the same notification twice). */
   async getRecipients(
     classroomId: string,
   ): Promise<{ id: string; name: string; email: string }[]> {

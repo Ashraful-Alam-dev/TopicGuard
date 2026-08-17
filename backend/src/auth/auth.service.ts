@@ -40,9 +40,7 @@ export class AuthService {
     private readonly emailService: EmailService,
   ) {}
 
-  // ---------------------------------------------------------------------
   // Registration (email verification via OTP)
-  // ---------------------------------------------------------------------
 
   /**
    * Starts registration: validates the email is free, stores a hashed
@@ -145,9 +143,7 @@ export class AuthService {
     return { message: 'A new verification code has been sent to your email' };
   }
 
-  // ---------------------------------------------------------------------
   // Forgot password (OTP)
-  // ---------------------------------------------------------------------
 
   /**
    * Always returns the same generic message, whether or not the email
@@ -192,13 +188,7 @@ export class AuthService {
     return genericResponse;
   }
 
-  /**
-   * Lets the client confirm an OTP before showing the "set new password"
-   * screen. Does not consume the token - resetPassword() re-checks the
-   * OTP and performs the actual update, so a registration OTP can never
-   * be reused for a password reset (different `type`) and this OTP alone
-   * can't be replayed to change the password without the email step too.
-   */
+  /** Lets the client confirm an OTP before showing the "set new password" screen. */
   async verifyResetOtp(dto: VerifyOtpDto): Promise<{ verified: boolean }> {
     const token = await this.findVerificationToken(
       dto.email,
@@ -239,9 +229,7 @@ export class AuthService {
     return { message: 'Your password has been reset successfully' };
   }
 
-  // ---------------------------------------------------------------------
   // Login / session (unchanged)
-  // ---------------------------------------------------------------------
 
   async validateCredentials(dto: LoginDto): Promise<User> {
     const user = await this.usersService.findByEmail(dto.email);
@@ -291,9 +279,7 @@ export class AuthService {
     return value * unitMs[match[2]];
   }
 
-  // ---------------------------------------------------------------------
   // VerificationToken helpers, shared by registration and password reset
-  // ---------------------------------------------------------------------
 
   private async findVerificationToken(
     email: string,
@@ -304,12 +290,7 @@ export class AuthService {
     });
   }
 
-  /**
-   * Generates a fresh OTP, stores only its hash, and creates or replaces
-   * the single VerificationToken row for this (email, type) pair - so we
-   * never accumulate unlimited OTP rows for the same email/purpose.
-   * Returns the plaintext OTP so the caller can email it.
-   */
+  /** Generates a fresh OTP, stores only its hash, and creates or replaces the single VerificationToken row for this (email, type) pair - so we never accumulate unlimited OTP rows for the same email/purpose. */
   private async issueVerificationToken(params: {
     email: string;
     type: VerificationTokenType;

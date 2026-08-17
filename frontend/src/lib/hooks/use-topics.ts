@@ -95,12 +95,7 @@ export function useTopicAvailability(
   });
 }
 
-/**
- * Semantic similarity check — triggered on submit, not on keystroke (unlike
- * useTopicAvailability). It's a mutation rather than a query because it's an
- * imperative "check this right now, once" action that gates whether we show
- * a confirmation dialog before actually saving.
- */
+/** Semantic similarity check — triggered on submit, not on keystroke (unlike useTopicAvailability). */
 export function useCheckSimilarity(submissionId: string) {
   return useMutation({
     mutationFn: ({
@@ -121,12 +116,7 @@ export function useCheckSimilarity(submissionId: string) {
 export const availableTopicMembersQueryKey = (submissionId: string) =>
   ["submissions", submissionId, "topics", "available-members"] as const
 
-/**
- * Classroom students available to add as team members (i.e. not already
- * attached to a topic in this submission). Only meant to drive the member
- * picker's UX — the backend re-validates availability on submit, so
- * `enabled` should be false whenever the picker isn't shown.
- */
+/** Classroom students available to add as team members, not yet on another topic. */
 export function useAvailableTopicMembers(submissionId: string, enabled = true) {
   return useQuery({
     queryKey: availableTopicMembersQueryKey(submissionId),

@@ -30,7 +30,7 @@ const techStack = [
   { layer: "Backend", items: "NestJS, REST endpoints, cookie-based sessions" },
   { layer: "Database", items: "PostgreSQL" },
   { layer: "Embedding Engine", items: "Xenova Mini LM" },
-  { layer: "AI Consultation", items: "Grok API" },
+  { layer: "AI Consultation", items: "Grok Model" },
 ]
 
 const features = [
@@ -114,7 +114,7 @@ const developers = [
   {
     name: "Ashraful Alam",
     intro:
-      "Software Engineering student at SUST, focused on building practical solutions for real classroom problems through software and AI.",
+      "Software Engineering student at SUST, passionate about building practical solutions to real-world problems rather than just memorizing lecture slides.",
     email: "ashrafulalam.rma@gmail.com",
     phone: "+8801572915649",
     facebook: "https://www.facebook.com/ashraful.alam.931253",
@@ -339,7 +339,6 @@ export default function AboutPage() {
                       <h3 className="text-xl font-semibold text-foreground">
                         {dev.name}
                       </h3>
-                      <p className="text-xs text-muted-foreground">Lead Developer</p>
                     </div>
                   </div>
 
@@ -350,23 +349,20 @@ export default function AboutPage() {
                   <Separator className="my-5" />
 
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <a
-                      href={`mailto:${dev.email}`}
-                      className="group flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3 transition-colors hover:bg-muted/60"
-                    >
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-background text-primary shadow-xs group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                    <div className="group flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-background text-primary shadow-xs">
                         <Mail className="size-4" />
                       </div>
+
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-medium text-muted-foreground">Email</p>
-                        <p className="truncate text-sm font-medium text-foreground">{dev.email}</p>
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {dev.email}
+                        </p>
                       </div>
-                    </a>
+                    </div>
 
-                    <a
-                      href={`tel:${dev.phone}`}
-                      className="group flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3 transition-colors hover:bg-muted/60"
-                    >
+                    <div className="group flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
                       <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-background text-primary shadow-xs group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                         <Phone className="size-4" />
                       </div>
@@ -374,7 +370,7 @@ export default function AboutPage() {
                         <p className="text-xs font-medium text-muted-foreground">Phone</p>
                         <p className="truncate text-sm font-medium text-foreground">{dev.phone}</p>
                       </div>
-                    </a>
+                    </div>
 
                     <Link
                       href={dev.facebook}

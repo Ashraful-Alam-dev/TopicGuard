@@ -33,13 +33,7 @@ export class UsersService {
     return this.prisma.user.create({ data });
   }
 
-  /**
-   * Builds the profile view: basic identity plus classroom counts.
-   * "As student" counts ClassroomMember rows, excluding classrooms the
-   * user monitors - every monitor is auto-added as a member of their own
-   * classroom (see ClassroomService.create), so without this exclusion a
-   * monitor's own classroom would be double-counted.
-   */
+  /** Builds the profile view: basic identity plus classroom counts. */
   async getProfile(userId: string): Promise<ProfileResponseDto> {
     const user = await this.findByIdOrThrow(userId);
 

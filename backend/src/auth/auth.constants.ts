@@ -7,12 +7,7 @@ export const MAX_OTP_ATTEMPTS = 5;
 /** Minimum time between two OTP sends for the same email, to curb abuse. */
 export const OTP_RESEND_COOLDOWN_MS = 60_000;
 
-/**
- * Distinguishes what a VerificationToken row is for. Kept as a plain
- * string union (matching the `type` column, which is a plain String in
- * the Prisma schema) rather than a Prisma enum, so no migration is needed
- * to introduce it.
- */
+/** Distinguishes what a VerificationToken row is for. */
 export const VerificationTokenType = {
   REGISTRATION: 'REGISTRATION',
   PASSWORD_RESET: 'PASSWORD_RESET',

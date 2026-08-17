@@ -13,12 +13,7 @@ export class MessageService {
     private readonly emailService: EmailService,
   ) {}
 
-  /**
-   * Sends an announcement-style message to a classroom. Only the current
-   * monitor may send messages, and only to a non-archived classroom
-   * (mirrors SubmissionService's create-time checks). Every classroom
-   * member (including the monitor) is emailed a best-effort notification.
-   */
+  /** Sends an announcement-style message to a classroom. */
   async create(
     classroomId: string,
     monitorId: string,

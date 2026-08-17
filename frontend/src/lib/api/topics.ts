@@ -9,12 +9,7 @@ import type {
 
 export interface TopicPayload {
   title: string;
-  /**
-   * IDs of students to attach as team members. Optional — omitting it (or
-   * sending an empty array) registers/keeps the topic as an individual
-   * topic. The backend is authoritative on availability; this is only ever
-   * a UX hint.
-   */
+  /** IDs of students to attach as team members. */
   memberIds?: string[];
 }
 
@@ -87,12 +82,7 @@ export const topicsApi = {
       )
       .then((res) => res.data),
 
-  /**
-   * Students in the submission's classroom who aren't already attached
-   * (as leader or member) to a topic in this submission. Used to populate
-   * the team-member picker. Purely a UX aid — the backend still enforces
-   * availability when the topic is actually registered/updated.
-   */
+  /** Students in the submission's classroom who aren't already attached (as leader or member) to a topic in this submission. */
   getAvailableMembers: (submissionId: string) =>
     apiClient
       .get<AvailableTopicMember[]>(
@@ -100,13 +90,7 @@ export const topicsApi = {
       )
       .then((res) => res.data),
 
-  /**
-   * Semantic similarity check, run right before a final submit. Never
-   * blocks by itself — it either reports an exact duplicate (belt-and-
-   * braces, the same thing checkAvailability already surfaces live) or the
-   * closest semantically-similar topics so the student can decide whether
-   * to submit anyway or go rework their title.
-   */
+  /** Semantic similarity check, run right before a final submit. */
   checkSimilarity: (
     submissionId: string,
     title: string,

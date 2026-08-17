@@ -24,12 +24,7 @@ const MEMBER_SELECT = {
   avatarUrl: true,
 } satisfies Prisma.UserSelect;
 
-/**
- * tx.topic.create()/update() only return the raw Topic row (no relations),
- * but register/update responses need leader+members to reflect the team
- * that was just saved. This shape carries that alongside the plain Topic
- * fields so TopicResponseDto can render it directly.
- */
+/** tx.topic.create()/update() only return the raw Topic row (no relations), but register/update responses need leader+members to reflect the team that was just saved. */
 type TopicWithTeam = Topic & {
   leader: TopicMemberSummary;
   members: TopicMemberSummary[];
@@ -245,15 +240,7 @@ export class TopicService {
     );
   }
 
-  /**
-   * Returns classroom members eligible to be added as team members: they
-   * belong to the classroom, aren't already leading or participating in
-   * another topic under this submission, and aren't the requester
-   * themselves (who is, or would become, the leader — not a "member").
-   *
-   * There is no invitation system: adding someone here makes them an
-   * immediately-confirmed member.
-   */
+  /** Returns classroom members eligible to be added as team members: they belong to the classroom, aren't already leading or participating in another topic under this submission, and aren't the requester themselves (who is, or would become, the leader — not a "member"). */
   async getAvailableMembers(
     submissionId: string,
     requesterId: string,
@@ -290,16 +277,9 @@ export class TopicService {
       .map((user) => AvailableMemberDto.fromEntity(user));
   }
 
-  // -----------------------------------------------------------------------
   // Membership / availability helpers
-  // -----------------------------------------------------------------------
 
-  /**
-   * The leader may include their own id in memberIds by mistake — that's a
-   * request error, not a silent no-op, since the leader/member distinction
-   * matters (e.g. what "isTeamTopic" means). class-validator's @ArrayUnique
-   * already rejects duplicate ids within the array itself.
-   */
+  /** Leader including their own id in memberIds is a request error, not a silent no-op — the leader/member distinction matters elsewhere. */
   private normalizeMemberIds(
     memberIds: string[] | undefined,
     leaderId: string,
@@ -313,15 +293,7 @@ export class TopicService {
     return ids;
   }
 
-  /**
-   * Verifies none of the given students already participate (as leader or
-   * member) in a DIFFERENT topic under this submission. Pass excludeTopicId
-   * when editing so the current topic's own leader/members aren't flagged
-   * as conflicting with themselves.
-   *
-   * Must be called after lockStudentsForSubmission inside the same
-   * transaction so the read reflects any concurrently-committing writes.
-   */
+  /** Verifies none of the given students already participate (as leader or member) in a DIFFERENT topic under this submission. */
   private async assertStudentsAvailable(
     tx: Prisma.TransactionClient,
     submissionId: string,
@@ -380,24 +352,7 @@ export class TopicService {
     }
   }
 
-  /**
-   * Race-condition guard: "a student cannot belong to two topics under the
-   * same submission" spans two tables (Topic.studentId for leaders,
-   * TopicMember.studentId for members), so a single cross-table unique
-   * constraint isn't possible without a larger schema redesign (e.g. a
-   * unified participants table). Instead, before re-checking availability
-   * we take a Postgres transaction-scoped advisory lock per
-   * (submissionId, studentId) pair, sorted for a stable lock order so two
-   * overlapping team registrations can't deadlock each other.
-   *
-   * This serializes concurrent register/edit requests that touch the same
-   * student in the same submission, which is sufficient to close the race
-   * in practice. Limitation: pg_advisory_xact_lock keys on hashtext(), so a
-   * hash collision between two different (submissionId, studentId) pairs
-   * would cause unrelated requests to serialize against each other
-   * (a performance cost, not a correctness issue — it never allows the
-   * invariant to be violated).
-   */
+  /** Race-condition guard: the "one topic per submission" rule spans two tables, so it can't be enforced with a single DB constraint — this re-checks it inside the transaction instead. */
   private async lockStudentsForSubmission(
     tx: Prisma.TransactionClient,
     submissionId: string,
@@ -458,9 +413,7 @@ export class TopicService {
     return submission;
   }
 
-  // -----------------------------------------------------------------------
   // Lookups
-  // -----------------------------------------------------------------------
 
   /** Leader-only lookup, used by update/delete which are leader-restricted. */
   private async getLeaderTopicOrThrow(

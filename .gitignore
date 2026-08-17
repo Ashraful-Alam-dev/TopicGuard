@@ -14,8 +14,6 @@ backend/dist/
 backend/coverage/
 
 backend/.env
-backend/.env.*
-backend/.env.example
 
 backend/prisma/dev.db
 backend/prisma/dev.db-journal
@@ -47,7 +45,7 @@ frontend/.env.production.local
 frontend/.env.test.local
 frontend/.env
 frontend/.env.*
-!frontend/.env.example
+
 
 frontend/*.log
 frontend/npm-debug.log*

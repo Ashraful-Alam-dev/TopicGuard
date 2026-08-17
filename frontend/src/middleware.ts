@@ -4,12 +4,7 @@ const AUTH_COOKIE = "access_token";
 const AUTH_ROUTES = ["/login", "/register"];
 const PUBLIC_ROUTES = [...AUTH_ROUTES, "/forgot-password", "/about"];
 
-/**
- * Lightweight route gate based on cookie presence only (no signature
- * verification — that happens server-side on every API call). This just
- * avoids flashing protected pages to signed-out visitors and bounces
- * signed-in users away from the auth pages.
- */
+/** Lightweight route gate based on cookie presence only (no signature verification — that happens server-side on every API call). */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasSession = request.cookies.has(AUTH_COOKIE);

@@ -8,14 +8,7 @@ import {
   MinLength,
 } from 'class-validator';
 
-/**
- * Shared by register and edit — both take the same fields, with
- * identical validation. Reusing one DTO avoids duplicating the rules.
- *
- * memberIds is optional: omitting it (or sending an empty array) keeps
- * the topic individual. A non-empty array registers/updates it as a team
- * topic, with the requesting student as leader.
- */
+/** Shared by register and edit — both take the same fields, with identical validation. */
 export class TopicDto {
   @IsString()
   @MinLength(3)

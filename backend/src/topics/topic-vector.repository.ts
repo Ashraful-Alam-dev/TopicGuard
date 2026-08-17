@@ -14,14 +14,7 @@ export interface SimilarTopicRow {
   similarity: number;
 }
 
-/**
- * `Topic.embedding` is declared as `Unsupported("vector(384)")` in
- * schema.prisma, which means Prisma Client omits it entirely from the
- * generated model type — it cannot be selected, included, or written via
- * the normal `prisma.topic.*` API. All reads/writes of that column are
- * isolated here behind raw SQL, so the rest of the app never has to deal
- * with that limitation directly.
- */
+/** `Topic.embedding` is declared as `Unsupported("vector(384)")` in schema.prisma, which means Prisma Client omits it entirely from the generated model type — it cannot be selected, included, or written via the normal `prisma.topic.*` API. */
 @Injectable()
 export class TopicVectorRepository {
   constructor(private readonly prisma: PrismaService) { }

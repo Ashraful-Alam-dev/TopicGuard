@@ -1,12 +1,6 @@
 import { ShieldCheck, Sparkles } from "lucide-react";
 
-/**
- * Signature visual: three submitted "topic" cards echo the product's core
- * job — spotting overlap before it becomes a problem. Two are linked by a
- * similarity score, one is cleared. Follows the app's light/dark setting,
- * with a deep navy surface in dark mode and a soft tinted surface in light
- * mode, so it never gets stuck looking like the "other" theme.
- */
+/** Signature visual: three submitted "topic" cards echo the product's core job — spotting overlap before it becomes a problem. */
 export function AuthBrandPanel() {
   return (
     <div className="relative hidden overflow-hidden bg-[#EEF2FF] lg:flex lg:flex-col lg:justify-between lg:p-12 dark:bg-[#0F172A]">
@@ -71,7 +65,7 @@ export function AuthBrandPanel() {
 
       <div className="relative flex items-center gap-2 text-xs text-[#64748B] dark:text-slate-500">
         <Sparkles className="size-3.5" />
-        AI-assisted similarity detection, on every submission.
+        AI-assisted similarity detection and feedback, on every submission.
       </div>
     </div>
   );

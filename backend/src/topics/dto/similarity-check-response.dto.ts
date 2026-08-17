@@ -22,12 +22,7 @@ export class SimilarTopicDto {
   }
 }
 
-/**
- * Only exact duplicates are rejected. This response never blocks
- * submission — it either reports the exact duplicate that already exists,
- * or the closest semantic matches so the student can make an informed
- * choice.
- */
+/** Only exact duplicates are rejected. */
 export class SimilarityCheckResponseDto {
   isDuplicate!: boolean;
   duplicate?: DuplicateTopicDto;

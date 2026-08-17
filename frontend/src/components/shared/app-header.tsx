@@ -48,7 +48,6 @@ export function AppHeader() {
 
         <div className="flex items-center gap-1.5">
           <Button
-            asChild
             variant="ghost"
             size="sm"
             className="hidden sm:inline-flex"

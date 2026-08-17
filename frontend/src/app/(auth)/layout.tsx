@@ -4,6 +4,7 @@ import { Info, ShieldCheck } from "lucide-react";
 import { AuthBrandPanel } from "@/components/auth/auth-brand-panel";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function AuthLayout({
   children,
@@ -31,7 +32,18 @@ export default function AuthLayout({
         </div>
 
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-10 sm:px-10">
-          <div className="w-full max-w-sm">{children}</div>
+          <div className="w-full max-w-sm">
+            {/* Free-tier backend sleeps when idle, so the very first request can time out */}
+            <Alert className="mb-4">
+              <Info />
+              <AlertDescription>
+                <AlertDescription>
+  The server may take a few seconds to start. If your request fails, please wait a few seconds and try again.
+</AlertDescription>
+              </AlertDescription>
+            </Alert>
+            {children}
+          </div>
 
           <Link href="/about" className="w-full max-w-sm">
             <Button variant="outline" size="sm" className="w-full">

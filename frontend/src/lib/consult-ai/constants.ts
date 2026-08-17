@@ -1,9 +1,4 @@
-/**
- * Client-side mirror of backend/src/consult-ai/consult-ai.constants.ts.
- * The backend is the source of truth and re-enforces all of these — these
- * exist purely so the UI can gate the button and trim the payload without
- * a round trip.
- */
+/** Client-side mirror of backend/src/consult-ai/consult-ai.constants.ts. */
 
 /** Button only activates once the title is longer than this. */
 export const CONSULT_AI_MIN_TITLE_LENGTH = 20;
