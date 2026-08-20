@@ -256,7 +256,7 @@ export class AuthService {
     return {
       httpOnly: true,
       secure: secure ?? isProduction,
-      sameSite: 'lax' as const,
+      sameSite: 'none' as const,
       maxAge: this.parseExpiryToMs(
         this.configService.get<string>('jwt.expiresIn') ?? '1d',
       ),
