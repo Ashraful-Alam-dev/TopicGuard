@@ -6,7 +6,9 @@ import { Check, ChevronDown } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-function Select({ ...props }: SelectPrimitive.Root.Props) {
+function Select({
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Root>) {
   return <SelectPrimitive.Root data-slot="select" {...props} />
 }
 
@@ -91,7 +93,7 @@ function SelectItem({
 function SelectSeparator({
   className,
   ...props
-}: SelectPrimitive.Group.Props) {
+}: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="select-separator"
