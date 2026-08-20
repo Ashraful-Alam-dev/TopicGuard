@@ -10,6 +10,12 @@ import { TopicVectorRepository } from './topic-vector.repository';
 import { SimilarityCheckResponseDto } from './dto/similarity-check-response.dto';
 import { AvailableMemberDto } from './dto/available-member.dto';
 import { TopicMemberSummary } from './dto/topic-response.dto';
+import { RateLimiterService } from '../common/rate-limit/rate-limiter.service';
+import {
+  TOPIC_WRITE_LIMIT,
+  TOPIC_WRITE_LIMIT_MESSAGE,
+  TOPIC_WRITE_WINDOW_MS,
+} from './topic.constants';
 
 /** Number of matches returned by the semantic similarity check. */
 const SIMILAR_TOPICS_LIMIT = 5;
@@ -38,13 +44,25 @@ export class TopicService {
     private readonly submissionService: SubmissionService,
     private readonly embeddingService: EmbeddingService,
     private readonly topicVectorRepository: TopicVectorRepository,
+    private readonly rateLimiter: RateLimiterService,
   ) { }
+
+  /** Shared by register/update — both trigger an embedding generation call. */
+  private enforceWriteLimit(studentId: string): void {
+    this.rateLimiter.consume(`topic-write:${studentId}`, {
+      limit: TOPIC_WRITE_LIMIT,
+      windowMs: TOPIC_WRITE_WINDOW_MS,
+      message: TOPIC_WRITE_LIMIT_MESSAGE,
+    });
+  }
 
   async registerTopic(
     submissionId: string,
     studentId: string,
     dto: TopicDto,
   ): Promise<TopicWithTeam> {
+    this.enforceWriteLimit(studentId);
+
     const submission = await this.submissionService.assertCanRegisterTopic(
       submissionId,
       studentId,
@@ -119,6 +137,8 @@ export class TopicService {
     studentId: string,
     dto: TopicDto,
   ): Promise<TopicWithTeam> {
+    this.enforceWriteLimit(studentId);
+
     await this.submissionService.assertCanRegisterTopic(
       submissionId,
       studentId,

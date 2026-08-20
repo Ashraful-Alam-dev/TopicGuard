@@ -37,7 +37,10 @@ import { TopicSimilarityCard } from "@/components/topic/topic-similarity-card"
 import { ConsultAiButton } from "@/components/topic/consult-ai-button"
 import { ConsultAiCard } from "@/components/topic/consult-ai-card"
 import { useConsultAi } from "@/lib/hooks/use-consult-ai"
-import { getConsultAiErrorMessage } from "@/lib/consult-ai/get-error-message"
+import {
+  getConsultAiErrorMessage,
+  isConsultAiDailyLimitError,
+} from "@/lib/consult-ai/get-error-message"
 import {
   CONSULT_AI_COOLDOWN_SECONDS,
   CONSULT_AI_MIN_TITLE_LENGTH,
@@ -97,6 +100,10 @@ export function TopicPanel({ submission }: { submission: Submission }) {
     React.useState<ConsultAiResult | null>(null)
   const [consultError, setConsultError] = React.useState<string | null>(null)
   const [cooldownRemaining, setCooldownRemaining] = React.useState(0)
+  // Sticky for the rest of the session once the per-user daily cap is hit —
+  // no point letting the 30s cooldown re-enable a button that will just
+  // 429 again immediately.
+  const [dailyLimitReached, setDailyLimitReached] = React.useState(false)
   const cooldownIntervalRef = React.useRef<
     ReturnType<typeof setInterval> | null
   >(null)
@@ -186,6 +193,9 @@ export function TopicPanel({ submission }: { submission: Submission }) {
         onError: (error) => {
           setConsultResult(null)
           setConsultError(getConsultAiErrorMessage(error))
+          if (isConsultAiDailyLimitError(error)) {
+            setDailyLimitReached(true)
+          }
         },
       },
     )
@@ -448,6 +458,7 @@ export function TopicPanel({ submission }: { submission: Submission }) {
                 active={consultAiActive}
                 isPending={consultAi.isPending}
                 cooldownRemaining={cooldownRemaining}
+                dailyLimitReached={dailyLimitReached}
                 onClick={handleConsultAi}
               />
             </div>

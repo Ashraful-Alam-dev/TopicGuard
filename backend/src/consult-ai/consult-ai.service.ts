@@ -11,11 +11,14 @@ import OpenAI from 'openai';
 
 import { PrismaService } from '../database/prisma.service';
 import { SubmissionService } from '../submission/submission.service';
+import { RateLimiterService } from '../common/rate-limit/rate-limiter.service';
 import { ConsultAiDto } from './dto/consult-ai-request.dto';
 import { ConsultAiResponseDto } from './dto/consult-ai-response.dto';
 import {
   CLASSROOM_NAME_MAX_LENGTH,
   CONSULT_AI_COOLDOWN_MS,
+  CONSULT_AI_DAILY_LIMIT,
+  CONSULT_AI_DAILY_LIMIT_MESSAGE,
   CONSULT_AI_REQUEST_TIMEOUT_MS,
   DEFAULT_GROQ_BASE_URL,
   DEFAULT_GROQ_MODEL,
@@ -43,6 +46,7 @@ export class ConsultAiService {
     private readonly configService: ConfigService,
     private readonly submissionService: SubmissionService,
     private readonly prisma: PrismaService,
+    private readonly rateLimiter: RateLimiterService,
   ) {
     const apiKey = this.configService.get<string>('consultAi.groqApiKey');
     const baseURL =
@@ -61,6 +65,7 @@ export class ConsultAiService {
       userId,
     );
 
+    this.enforceDailyLimit(userId);
     this.enforceCooldown(userId);
 
     if (!this.client) {
@@ -139,6 +144,21 @@ export class ConsultAiService {
     }
 
     return submission;
+  }
+
+  /**
+   * Groq's free-tier budget for this model is shared by every user of the
+   * app (1,000 requests/day, 30/minute). Capping each user's own daily
+   * usage keeps one heavy user from starving everyone else's share.
+   */
+  private enforceDailyLimit(userId: string): void {
+    this.rateLimiter.consume(`consult-ai:${userId}`, {
+      limit: CONSULT_AI_DAILY_LIMIT,
+      windowMs: 24 * 60 * 60 * 1000,
+      dailyLimit: CONSULT_AI_DAILY_LIMIT,
+      message: CONSULT_AI_DAILY_LIMIT_MESSAGE,
+      dailyMessage: CONSULT_AI_DAILY_LIMIT_MESSAGE,
+    });
   }
 
   private enforceCooldown(userId: string): void {

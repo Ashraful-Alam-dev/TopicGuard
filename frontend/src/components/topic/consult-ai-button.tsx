@@ -10,6 +10,8 @@ interface ConsultAiButtonProps {
   isPending: boolean
   /** Seconds left in the post-click cooldown, 0 when idle. */
   cooldownRemaining: number
+  /** True once the per-user daily Consult AI cap has been hit for today. */
+  dailyLimitReached?: boolean
   onClick: () => void
 }
 
@@ -22,10 +24,11 @@ export function ConsultAiButton({
   active,
   isPending,
   cooldownRemaining,
+  dailyLimitReached = false,
   onClick,
 }: ConsultAiButtonProps) {
   const onCooldown = cooldownRemaining > 0
-  const disabled = !active || isPending || onCooldown
+  const disabled = !active || isPending || onCooldown || dailyLimitReached
 
   return (
     <button
@@ -34,9 +37,11 @@ export function ConsultAiButton({
       onClick={onClick}
       aria-label="Consult AI for feedback on this topic"
       title={
-        onCooldown
-          ? `Consult AI is cooling down (${cooldownRemaining}s)`
-          : "Consult AI for feedback on this topic"
+        dailyLimitReached
+          ? "You've reached today's AI consult limit. Please try again tomorrow."
+          : onCooldown
+            ? `Consult AI is cooling down (${cooldownRemaining}s)`
+            : "Consult AI for feedback on this topic"
       }
       className={cn(
         "absolute top-1/2 right-1 flex h-6 -translate-y-1/2 items-center gap-1 rounded-md px-1.5 text-[0.7rem] font-medium transition-colors",
@@ -50,7 +55,11 @@ export function ConsultAiButton({
       ) : (
         <Sparkles className="size-3.5" />
       )}
-      {onCooldown ? `${cooldownRemaining}s` : "Consult AI"}
+      {dailyLimitReached
+        ? "Limit reached"
+        : onCooldown
+          ? `${cooldownRemaining}s`
+          : "Consult AI"}
     </button>
   )
 }
