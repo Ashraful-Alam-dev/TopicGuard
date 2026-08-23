@@ -264,6 +264,17 @@ export class AuthService {
     };
   }
 
+  getClearCookieOptions() {
+    const isProduction = this.configService.get('nodeEnv') === 'production';
+    const secure = this.configService.get<boolean>('cookie.secure');
+    return {
+      httpOnly: true,
+      secure: secure ?? isProduction,
+      sameSite: 'none' as const,
+      path: '/',
+    };
+  }
+
   private parseExpiryToMs(expiresIn: string): number {
     const match = /^(\d+)([smhd])$/.exec(expiresIn);
     if (!match) {
