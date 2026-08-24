@@ -1,15 +1,11 @@
 import axios, { AxiosError } from "axios";
 import type { ApiErrorBody } from "@/lib/types";
 
-/**
- * Base URL for the NestJS API. Set NEXT_PUBLIC_API_URL in .env.local, e.g.
- * NEXT_PUBLIC_API_URL=http://localhost:3000/api
- */
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 
 export const apiClient = axios.create({
   baseURL: API_URL,
-  withCredentials: true, // sends/receives the httpOnly access_token cookie
+  withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });
 
@@ -27,15 +23,12 @@ apiClient.interceptors.response.use(
         try {
           await apiClient.post("/auth/logout");
         } catch {}
-
         window.location.replace("/login");
       }
     }
-
     return Promise.reject(error);
   },
 );
-
 
 export function getApiErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
