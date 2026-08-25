@@ -411,6 +411,35 @@ export default function AboutPage() {
             </div>
           </Card>
 
+          {/* Support */}
+          <Card className="p-6">
+            <SectionHeading
+              icon={Mail}
+              title="Support"
+              eyebrow="Need help?"
+            />
+            <p className="mt-4 leading-7 text-muted-foreground">
+              Running into an issue or have a question about TopicGuard?
+              Reach out and we&apos;ll get back to you.
+            </p>
+            <div className="mt-4 flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3 sm:w-fit">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-background text-primary shadow-xs">
+                <Mail className="size-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Email
+                </p>
+                <a
+                  href="mailto:2022831006@student.sust.edu"
+                  className="truncate text-sm font-medium text-foreground hover:underline"
+                >
+                  2022831006@student.sust.edu
+                </a>
+              </div>
+            </div>
+          </Card>
+
           {!isAuthenticated && (
             <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border bg-card/50 px-6 py-10 text-center">
               <p className="text-sm text-muted-foreground">

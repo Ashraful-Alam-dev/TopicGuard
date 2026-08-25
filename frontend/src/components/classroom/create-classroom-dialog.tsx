@@ -87,7 +87,7 @@ export function CreateClassroomDialog() {
               <Label htmlFor="name">Classroom name</Label>
               <Input
                 id="name"
-                placeholder="Senior Capstone 2026"
+                placeholder="Web Technology"
                 aria-invalid={!!errors.name}
                 {...register("name")}
               />
@@ -102,7 +102,7 @@ export function CreateClassroomDialog() {
               <Label htmlFor="courseCode">Course code</Label>
               <Input
                 id="courseCode"
-                placeholder="CS-499"
+                placeholder="SWE-499"
                 aria-invalid={!!errors.courseCode}
                 {...register("courseCode")}
               />

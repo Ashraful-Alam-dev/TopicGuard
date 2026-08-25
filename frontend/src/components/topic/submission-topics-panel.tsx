@@ -17,6 +17,7 @@ import {
 
 import { TopicSimilarityBadge } from "@/components/topic/topic-similarity-badge"
 import { SimilarTopicsList } from "@/components/topic/similar-topics-list"
+import { TeamMembersList } from "@/components/topic/team-members-list"
 
 import { useSubmissionTopics } from "@/lib/hooks/use-topics"
 import { getInitials, formatDateTime } from "@/lib/utils-format"
@@ -103,20 +104,10 @@ export function SubmissionTopicsPanel({
 
               <TableCell className="align-top">
                 {topic.isTeamTopic ? (
-                  <div className="space-y-1 text-xs">
-                    <p className="text-muted-foreground">
-                      Leader:{" "}
-                      <span className="font-medium text-foreground">
-                        {topic.leader.name}
-                      </span>
-                    </p>
-                    <p className="text-muted-foreground">
-                      Members:{" "}
-                      <span className="font-medium text-foreground">
-                        {topic.members.map((m) => m.name).join(", ")}
-                      </span>
-                    </p>
-                  </div>
+                  <TeamMembersList
+                    leader={topic.leader}
+                    members={topic.members}
+                  />
                 ) : (
                   <span className="text-xs text-muted-foreground">
                     Individual

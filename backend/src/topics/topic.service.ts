@@ -679,11 +679,13 @@ export class TopicService {
           }));
 
         const { members, ...rest } = topic;
+        const mappedMembers = members.map((m) => m.student);
 
         return {
           ...rest,
           leader: topic.student,
-          members: members.map((m) => m.student),
+          members: mappedMembers,
+          isTeamTopic: mappedMembers.length > 0,
           highestSimilarity:
             similarTopics.length > 0
               ? similarTopics[0].similarityScore

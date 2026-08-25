@@ -341,7 +341,7 @@ export function TopicPanel({ submission }: { submission: Submission }) {
         />
 
         {canManage && isLeader && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 mt-3">
             <Button
               variant="outline"
               size="sm"
@@ -445,7 +445,7 @@ export function TopicPanel({ submission }: { submission: Submission }) {
             <div className="relative">
               <Input
                 id="topic-title"
-                placeholder="e.g. Real-time collaborative editing with CRDTs"
+                placeholder="A detail title that presents your idea in a great way"
                 aria-invalid={!!errors.title}
                 className="pr-24"
                 {...register("title")}

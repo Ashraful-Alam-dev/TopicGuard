@@ -67,7 +67,7 @@ export function ForgotPasswordEmailForm({
               id="email"
               type="email"
               autoComplete="email"
-              placeholder="you@school.edu"
+              placeholder="you@student.edu"
               className="pl-8"
               aria-invalid={!!errors.email}
               {...register("email")}

@@ -70,7 +70,7 @@ export function RegisterForm() {
             <Input
               id="name"
               autoComplete="name"
-              placeholder="Ada Lovelace"
+              placeholder="Sadman Mugdho"
               className="pl-8"
               aria-invalid={!!errors.name}
               {...register("name")}
@@ -89,7 +89,7 @@ export function RegisterForm() {
               id="email"
               type="email"
               autoComplete="email"
-              placeholder="you@school.edu"
+              placeholder="you@student.edu"
               className="pl-8"
               aria-invalid={!!errors.email}
               {...register("email")}
