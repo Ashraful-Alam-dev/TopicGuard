@@ -1,9 +1,3 @@
-/**
- * Minimal, dependency-free HTML templates for transactional emails.
- * Kept intentionally simple (no external templating engine) since
- * the project has no such dependency today.
- */
-
 function layout(title: string, bodyHtml: string): string {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #1f2937;">

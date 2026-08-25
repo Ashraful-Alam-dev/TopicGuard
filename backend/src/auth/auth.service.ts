@@ -80,11 +80,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Verifies the registration OTP. On success, creates the User and
-   * deletes the pending record transactionally; on failure, neither
-   * happens and the attempt counter is incremented.
-   */
   async verifyRegistrationOtp(dto: VerifyOtpDto): Promise<User> {
     const token = await this.findVerificationToken(
       dto.email,

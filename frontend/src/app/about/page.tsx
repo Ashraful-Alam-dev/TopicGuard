@@ -419,7 +419,7 @@ export default function AboutPage() {
               eyebrow="Need help?"
             />
             <p className="mt-4 leading-7 text-muted-foreground">
-              Running into an issue or have a question about TopicGuard?
+              Facing an issue or have question about TopicGuard?
               Reach out and we&apos;ll get back to you.
             </p>
             <div className="mt-4 flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3 sm:w-fit">
