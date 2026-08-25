@@ -18,7 +18,7 @@ export default function ProfilePage() {
   return (
     <div className="flex flex-col gap-6">
       <Link
-        href="/dashboard"
+        href="/"
         className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-3.5" />

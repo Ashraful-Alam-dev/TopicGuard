@@ -29,7 +29,7 @@ export default function SubmissionDetailPage({
   return (
     <div className="flex flex-col gap-6">
       <Link
-        href={submission ? `/classrooms/${submission.classroomId}` : "/dashboard"}
+        href={submission ? `/classrooms/${submission.classroomId}` : "/"}
         className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-3.5" />

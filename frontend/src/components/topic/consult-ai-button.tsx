@@ -15,6 +15,11 @@ interface ConsultAiButtonProps {
   onClick: () => void
 }
 
+/**
+ * Floating trigger rendered inside the title input's right edge. Purely
+ * presentational — TopicPanel owns the activation/cooldown state and
+ * passes it down, since that logic is shared with the rest of the form.
+ */
 export function ConsultAiButton({
   active,
   isPending,

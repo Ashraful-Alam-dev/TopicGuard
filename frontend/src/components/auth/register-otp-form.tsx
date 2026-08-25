@@ -42,7 +42,7 @@ export function RegisterOtpForm({
     onSuccess: (data) => {
       queryClient.setQueryData(AUTH_QUERY_KEY, data.user)
       toast.success("Email verified")
-      router.push("/dashboard")
+      router.push("/")
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error))

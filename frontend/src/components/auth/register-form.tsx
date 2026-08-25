@@ -89,7 +89,7 @@ export function RegisterForm() {
               id="email"
               type="email"
               autoComplete="email"
-              placeholder="you@student.edu"
+              placeholder="you@school.edu"
               className="pl-8"
               aria-invalid={!!errors.email}
               {...register("email")}

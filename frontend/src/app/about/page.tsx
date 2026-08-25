@@ -139,7 +139,7 @@ export default function AboutPage() {
           <div className="flex items-center gap-1.5">
             <ThemeToggle />
             <Link
-              href={isAuthenticated ? "/dashboard" : "/login"}
+              href={isAuthenticated ? "/" : "/login"}
               className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               {isAuthenticated ? "Dashboard" : "Sign in"}
@@ -419,7 +419,7 @@ export default function AboutPage() {
               eyebrow="Need help?"
             />
             <p className="mt-4 leading-7 text-muted-foreground">
-              Facing an issue or have question about TopicGuard?
+              Running into an issue or have a question about TopicGuard?
               Reach out and we&apos;ll get back to you.
             </p>
             <div className="mt-4 flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3 sm:w-fit">

@@ -34,7 +34,7 @@ export function LoginForm() {
     onSuccess: (data) => {
       queryClient.setQueryData(AUTH_QUERY_KEY, data.user)
       toast.success(`Welcome back, ${data.user.name.split(" ")[0]}`)
-      router.push(searchParams.get("next") ?? "/dashboard")
+      router.push(searchParams.get("next") ?? "/")
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error))
@@ -65,7 +65,7 @@ export function LoginForm() {
               id="email"
               type="email"
               autoComplete="email"
-              placeholder="you@student.edu"
+              placeholder="you@school.edu"
               className="pl-8"
               aria-invalid={!!errors.email}
               {...register("email")}

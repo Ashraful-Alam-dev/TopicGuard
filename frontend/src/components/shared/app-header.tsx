@@ -39,7 +39,7 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-sm">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
-        <Link href="/dashboard" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <ShieldCheck className="size-5 text-primary" strokeWidth={2.25} />
           <span className="text-[15px] font-semibold tracking-tight text-foreground">
             TopicGuard
