@@ -1,11 +1,7 @@
 import axios, { AxiosError } from "axios";
 import type { ApiErrorBody } from "@/lib/types";
 
-/**
- * Base URL for the NestJS API. Set NEXT_PUBLIC_API_URL in .env.local, e.g.
- * NEXT_PUBLIC_API_URL=http://localhost:3000/api
- */
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api";
+const API_URL = "/api";
 
 export const apiClient = axios.create({
   baseURL: API_URL,
