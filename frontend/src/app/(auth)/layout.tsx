@@ -19,6 +19,7 @@ export default function AuthLayout({
         <div className="flex items-center justify-between px-6 pt-6 sm:px-10">
           <Link
             href="/"
+            prefetch={false}
             className="flex items-center gap-2 text-foreground lg:hidden"
           >
             <ShieldCheck className="size-5 text-primary" strokeWidth={2.25} />

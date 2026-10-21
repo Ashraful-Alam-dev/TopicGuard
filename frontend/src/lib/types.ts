@@ -73,6 +73,8 @@ export interface Topic {
   submissionId: string;
   studentId: string;
   originalTitle: string;
+  /** Optional project description (stored alongside the title). */
+  description: string | null;
   normalizedTitle: string;
   createdAt: string;
   updatedAt: string;
@@ -148,6 +150,26 @@ export interface Message {
   content: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/** A one-to-one message from a member to the classroom monitor (CR). */
+export interface MemberMessage {
+  id: string;
+  classroomId: string;
+  senderId: string;
+  content: string;
+  replyContent: string | null;
+  repliedAt: string | null;
+  createdAt: string;
+  /** Present in the monitor's inbox and dashboard summary. */
+  sender?: Pick<User, "id" | "name" | "email" | "avatarUrl">;
+  /** Present in the dashboard summaries. */
+  classroom?: { id: string; name: string };
+}
+
+export interface PendingMemberMessages {
+  total: number;
+  messages: MemberMessage[];
 }
 
 /**

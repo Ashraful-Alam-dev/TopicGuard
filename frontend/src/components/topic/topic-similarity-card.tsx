@@ -51,6 +51,18 @@ export function TopicSimilarityCard({
           </p>
         </div>
 
+        {topic.description && (
+          <div>
+            <p className="text-xs text-muted-foreground">
+              Description
+            </p>
+
+            <p className="mt-1 text-sm font-medium">
+              {topic.description}
+            </p>
+          </div>
+        )}
+
         {topic.isTeamTopic && (
           <div className="grid grid-cols-2 gap-4">
             <div>

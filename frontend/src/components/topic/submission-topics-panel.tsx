@@ -96,6 +96,12 @@ export function SubmissionTopicsPanel({
                     {topic.originalTitle}
                   </p>
 
+                  {topic.description && (
+                    <p className="text-xs text-muted-foreground">
+                      {topic.description}
+                    </p>
+                  )}
+
                   <SimilarTopicsList
                     topics={topic.similarTopics}
                   />

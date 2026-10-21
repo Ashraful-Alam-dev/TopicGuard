@@ -9,6 +9,8 @@ import type {
 
 export interface TopicPayload {
   title: string;
+  /** Optional project description; stored together with the title. */
+  description?: string;
   /** IDs of students to attach as team members. */
   memberIds?: string[];
 }
@@ -95,11 +97,13 @@ export const topicsApi = {
     submissionId: string,
     title: string,
     topicId?: string,
+    description?: string,
   ) =>
     apiClient
       .post(`/topics/check-similarity`, {
         submissionId,
         title,
+        ...(description ? { description } : {}),
         ...(topicId ? { topicId } : {}),
       })
       .then((res) => res.data),

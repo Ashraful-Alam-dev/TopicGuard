@@ -30,6 +30,7 @@ export class TopicSimilarityController {
       user.id,
       dto.title,
       dto.topicId,
+      dto.description,
     );
   }
 }

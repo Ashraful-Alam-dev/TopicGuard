@@ -11,6 +11,7 @@ import { ClassroomModule } from './classroom/classroom.module';
 import { SubmissionModule } from './submission/submission.module';
 import { TopicModule } from './topics/topic.module';
 import { MessageModule } from './message/message.module';
+import { MemberMessageModule } from './member-message/member-message.module';
 import { ConsultAiModule } from './consult-ai/consult-ai.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -25,6 +26,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     SubmissionModule,
     TopicModule,
     MessageModule,
+    MemberMessageModule,
     ConsultAiModule,
   ],
   controllers: [AppController],

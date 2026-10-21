@@ -101,14 +101,17 @@ export function useCheckSimilarity(submissionId: string) {
     mutationFn: ({
       title,
       topicId,
+      description,
     }: {
       title: string
       topicId?: string
+      description?: string
     }) =>
       topicsApi.checkSimilarity(
         submissionId,
         title,
         topicId,
+        description,
       ),
   })
 }

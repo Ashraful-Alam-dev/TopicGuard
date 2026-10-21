@@ -5,6 +5,11 @@ import { ConfigService } from '@nestjs/config';
 import { SubmissionService } from '../submission/submission.service';
 import { TopicDto } from './dto/topic.dto';
 import { normalizeTitle } from '../common/utils/normalize-title.util';
+import {
+  composeTopicText,
+  parseTopicText,
+  toEmbeddingText,
+} from '../common/utils/topic-text.util';
 import { EmbeddingService } from '../embedding/embedding.service';
 import { TopicVectorRepository } from './topic-vector.repository';
 import { SimilarityCheckResponseDto } from './dto/similarity-check-response.dto';
@@ -70,10 +75,14 @@ export class TopicService {
 
     const memberIds = this.normalizeMemberIds(dto.memberIds, studentId);
 
+    // Duplicate detection stays on the title alone; the description only
+    // enriches what is stored and embedded.
     const normalizedTitle = normalizeTitle(dto.title);
+    const storedText = composeTopicText(dto.title, dto.description);
 
-    const embedding =
-      await this.embeddingService.generateEmbedding(dto.title.trim());
+    const embedding = await this.embeddingService.generateEmbedding(
+      toEmbeddingText(dto.title, dto.description),
+    );
 
     return this.prisma.$transaction(async (tx) => {
       // Serialize any concurrent request touching the same
@@ -107,7 +116,7 @@ export class TopicService {
         data: {
           submissionId,
           studentId,
-          originalTitle: dto.title,
+          originalTitle: storedText,
           normalizedTitle,
         },
       });
@@ -151,8 +160,15 @@ export class TopicService {
     const normalizedTitle = normalizeTitle(dto.title);
     const titleChanged = normalizedTitle !== topic.normalizedTitle;
 
-    const embedding = titleChanged
-      ? await this.embeddingService.generateEmbedding(dto.title.trim())
+    // A description-only edit must still refresh the embedding, but never
+    // triggers the title duplicate check.
+    const storedText = composeTopicText(dto.title, dto.description);
+    const textChanged = storedText !== topic.originalTitle;
+
+    const embedding = textChanged
+      ? await this.embeddingService.generateEmbedding(
+          toEmbeddingText(dto.title, dto.description),
+        )
       : null;
 
     return this.prisma.$transaction(async (tx) => {
@@ -195,7 +211,7 @@ export class TopicService {
       const updated = await tx.topic.update({
         where: { id: topic.id },
         data: {
-          originalTitle: dto.title,
+          originalTitle: storedText,
           normalizedTitle,
         },
       });
@@ -213,7 +229,7 @@ export class TopicService {
         });
       }
 
-      if (titleChanged && embedding) {
+      if (textChanged && embedding) {
         await this.topicVectorRepository.upsertEmbedding(
           tx,
           updated.id,
@@ -510,7 +526,7 @@ export class TopicService {
     const similarTopics = matches
       .filter((m) => m.similarity >= threshold)
       .map((m) => ({
-        title: m.title,
+        title: parseTopicText(m.title).title,
         studentName: m.studentName,
         similarityScore: m.similarity,
       }));
@@ -552,7 +568,7 @@ export class TopicService {
 
     if (duplicate) {
       throw new ConflictException(
-        `"${duplicate.originalTitle}" has already been registered by ${duplicate.student.name}. Please choose a different topic.`,
+        `"${parseTopicText(duplicate.originalTitle).title}" has already been registered by ${duplicate.student.name}. Please choose a different topic.`,
       );
     }
   }
@@ -673,16 +689,19 @@ export class TopicService {
         const similarTopics = matches
           .filter((m) => m.similarity >= threshold)
           .map((m) => ({
-            title: m.title,
+            title: parseTopicText(m.title).title,
             studentName: m.studentName,
             similarityScore: m.similarity,
           }));
 
         const { members, ...rest } = topic;
         const mappedMembers = members.map((m) => m.student);
+        const parsed = parseTopicText(topic.originalTitle);
 
         return {
           ...rest,
+          originalTitle: parsed.title,
+          description: parsed.description,
           leader: topic.student,
           members: mappedMembers,
           isTeamTopic: mappedMembers.length > 0,
@@ -718,6 +737,7 @@ export class TopicService {
     userId: string,
     title: string,
     topicId?: string,
+    description?: string,
   ): Promise<SimilarityCheckResponseDto> {
     await this.submissionService.assertMemberAccess(
       submissionId,
@@ -748,8 +768,9 @@ export class TopicService {
       return SimilarityCheckResponseDto.duplicateOf(duplicate);
     }
 
-    const embedding =
-      await this.embeddingService.generateEmbedding(title.trim());
+    const embedding = await this.embeddingService.generateEmbedding(
+      toEmbeddingText(title, description),
+    );
 
     const matches =
       await this.topicVectorRepository.findSimilarTopics(

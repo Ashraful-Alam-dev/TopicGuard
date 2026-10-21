@@ -20,6 +20,7 @@ model User {
   classroomMemberships ClassroomMember[]
   topics               Topic[]
   sentMessages         Message[]
+  memberMessages       MemberMessage[]
   topicMemberships     TopicMember[]
 
   @@map("users")
@@ -44,6 +45,7 @@ model Classroom {
   members     ClassroomMember[]
   submissions Submission[]
   messages    Message[]
+  memberMessages MemberMessage[]
 
   @@index([monitorId])
   @@map("classrooms")
@@ -83,6 +85,29 @@ model Message {
   @@index([classroomId])
   @@index([senderId])
   @@map("messages")
+}
+
+/// One-to-one message from a classroom member to the classroom monitor (CR).
+/// The CR may answer once; a member who needs more sends a new message.
+model MemberMessage {
+  id String @id @default(uuid()) @db.Uuid
+
+  classroomId String @map("classroom_id") @db.Uuid
+  senderId    String @map("sender_id") @db.Uuid
+
+  content String
+
+  replyContent String?   @map("reply_content")
+  repliedAt    DateTime? @map("replied_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  sender    User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([classroomId, createdAt])
+  @@index([senderId])
+  @@map("member_messages")
 }
 
 model Submission {

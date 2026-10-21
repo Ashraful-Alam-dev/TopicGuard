@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
@@ -14,10 +14,10 @@ import { Label } from "@/components/ui/label"
 import { authApi } from "@/lib/api/auth"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { AUTH_QUERY_KEY } from "@/lib/hooks/use-auth"
+import { navigateAfterAuth } from "@/lib/navigation"
 import { loginSchema, type LoginFormValues } from "@/lib/validation/auth"
 
 export function LoginForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const queryClient = useQueryClient()
 
@@ -34,7 +34,7 @@ export function LoginForm() {
     onSuccess: (data) => {
       queryClient.setQueryData(AUTH_QUERY_KEY, data.user)
       toast.success(`Welcome back, ${data.user.name.split(" ")[0]}`)
-      router.push(searchParams.get("next") ?? "/")
+      navigateAfterAuth(searchParams.get("next"))
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error))

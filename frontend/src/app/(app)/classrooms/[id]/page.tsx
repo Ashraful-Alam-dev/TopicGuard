@@ -2,7 +2,16 @@
 
 import { use } from "react"
 import Link from "next/link"
-import { ArrowLeft, Archive, ClipboardList, Crown, Megaphone, Users } from "lucide-react"
+import {
+  ArrowLeft,
+  Archive,
+  ClipboardList,
+  Crown,
+  Inbox,
+  Megaphone,
+  MessageSquare,
+  Users,
+} from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
@@ -16,6 +25,11 @@ import { TransferMonitorDialog } from "@/components/classroom/transfer-monitor-d
 import { ArchiveClassroomAction } from "@/components/classroom/archive-classroom-action"
 import { SendMessageDialog } from "@/components/message/send-message-dialog"
 import { MessageList } from "@/components/message/message-list"
+import { SendMemberMessageDialog } from "@/components/member-message/send-member-message-dialog"
+import {
+  MemberInbox,
+  MyMemberMessages,
+} from "@/components/member-message/member-message-list"
 import { CreateSubmissionDialog } from "@/components/submission/create-submission-dialog"
 import { SubmissionList } from "@/components/submission/submission-list"
 import { useClassroom } from "@/lib/hooks/use-classrooms"
@@ -136,6 +150,36 @@ export default function ClassroomDetailPage({
               classroomId={classroom.id}
               isMonitor={classroom.isMonitor}
             />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-1.5">
+                {classroom.isMonitor ? (
+                  <Inbox className="size-4 text-muted-foreground" />
+                ) : (
+                  <MessageSquare className="size-4 text-muted-foreground" />
+                )}
+                <h2 className="text-sm font-medium text-foreground">
+                  {classroom.isMonitor ? "Inbox" : "Messages to your CR"}
+                </h2>
+              </div>
+              {!classroom.isMonitor && !classroom.isArchived && (
+                <SendMemberMessageDialog classroomId={classroom.id} />
+              )}
+            </div>
+            <Separator className="my-3" />
+            {classroom.isMonitor ? (
+              <MemberInbox
+                classroomId={classroom.id}
+                readOnly={classroom.isArchived}
+              />
+            ) : (
+              <MyMemberMessages
+                classroomId={classroom.id}
+                readOnly={classroom.isArchived}
+              />
+            )}
           </div>
 
           <Card className="px-4">

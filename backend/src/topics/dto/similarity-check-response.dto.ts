@@ -1,4 +1,5 @@
 import { SimilarTopicRow } from '../topic-vector.repository';
+import { parseTopicText } from '../../common/utils/topic-text.util';
 
 export class DuplicateTopicDto {
   studentId!: string;
@@ -14,7 +15,7 @@ export class SimilarTopicDto {
 
   static fromRow(row: SimilarTopicRow): SimilarTopicDto {
     const dto = new SimilarTopicDto();
-    dto.title = row.title;
+    dto.title = parseTopicText(row.title).title;
     dto.similarityScore = Math.round(row.similarity * 10000) / 10000;
     dto.submissionId = row.submissionId;
     dto.studentName = row.studentName ?? undefined;
@@ -37,7 +38,7 @@ export class SimilarityCheckResponseDto {
     dto.duplicate = {
       studentId: topic.student.id,
       studentName: topic.student.name,
-      title: topic.originalTitle,
+      title: parseTopicText(topic.originalTitle).title,
     };
     return dto;
   }

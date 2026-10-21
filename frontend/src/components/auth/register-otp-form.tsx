@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
@@ -14,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { authApi } from "@/lib/api/auth"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { AUTH_QUERY_KEY } from "@/lib/hooks/use-auth"
+import { navigateAfterAuth } from "@/lib/navigation"
 import { useResendCooldown } from "@/lib/hooks/use-resend-cooldown"
 import { otpSchema, type OtpFormValues } from "@/lib/validation/auth"
 
@@ -24,7 +24,6 @@ export function RegisterOtpForm({
   email: string
   onBack: () => void
 }) {
-  const router = useRouter()
   const queryClient = useQueryClient()
   const cooldown = useResendCooldown()
 
@@ -42,7 +41,7 @@ export function RegisterOtpForm({
     onSuccess: (data) => {
       queryClient.setQueryData(AUTH_QUERY_KEY, data.user)
       toast.success("Email verified")
-      router.push("/")
+      navigateAfterAuth()
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error))

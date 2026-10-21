@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   AlertDialog,
@@ -48,7 +49,11 @@ import {
 } from "@/lib/consult-ai/constants"
 import { useDebounce } from "@/lib/hooks/use-debounce"
 import { getApiErrorMessage } from "@/lib/api/client"
-import { topicSchema, type TopicFormValues } from "@/lib/validation/topic"
+import {
+  TOPIC_DESCRIPTION_MAX_LENGTH,
+  topicSchema,
+  type TopicFormValues,
+} from "@/lib/validation/topic"
 import type {
   ConsultAiResult,
   SimilarTopic,
@@ -77,6 +82,10 @@ export function TopicPanel({ submission }: { submission: Submission }) {
 
   const [title, setTitle] = React.useState(
     topic?.originalTitle ?? "",
+  )
+
+  const [description, setDescription] = React.useState(
+    topic?.description ?? "",
   )
 
   const debouncedTitle = useDebounce(title, 500)
@@ -143,6 +152,7 @@ export function TopicPanel({ submission }: { submission: Submission }) {
   }
 
   function useRecommendedTopic(recommendedTitle: string) {
+    // Only the title is replaced; the student's own description is kept.
     setTitle(recommendedTitle)
 
     reset({
@@ -184,6 +194,9 @@ export function TopicPanel({ submission }: { submission: Submission }) {
       {
         submissionId: submission.id,
         title: title.trim().slice(0, CONSULT_AI_TITLE_MAX_LENGTH),
+        ...(description.trim()
+          ? { description: description.trim() }
+          : {}),
       },
       {
         onSuccess: (data) => {
@@ -224,19 +237,21 @@ export function TopicPanel({ submission }: { submission: Submission }) {
     const currentTitle = topic?.originalTitle ?? ""
 
     setTitle(currentTitle)
+    setDescription(topic?.description ?? "")
 
     reset({
       title: currentTitle,
     })
 
     setSelectedMembers(topic?.members ?? [])
-  }, [topic?.id, topic?.originalTitle, reset])
+  }, [topic?.id, topic?.originalTitle, topic?.description, reset])
 
   const canManage = submission.isOpen
 
   function saveTopic(values: TopicFormValues) {
     const payload = {
       ...values,
+      description: description.trim(),
       memberIds: selectedMembers.map((member) => member.id),
     }
 
@@ -271,6 +286,7 @@ export function TopicPanel({ submission }: { submission: Submission }) {
       {
         title: values.title,
         topicId: topic?.id,
+        description: description.trim() || undefined,
       },
       {
         onSuccess: (result) => {
@@ -347,6 +363,7 @@ export function TopicPanel({ submission }: { submission: Submission }) {
               size="sm"
               onClick={() => {
                 setTitle(topic.originalTitle)
+                setDescription(topic.description ?? "")
                 reset({
                   title: topic.originalTitle,
                 })
@@ -469,6 +486,12 @@ export function TopicPanel({ submission }: { submission: Submission }) {
               </p>
             )}
 
+            {!isTitleLongEnough && (
+              <p className="text-xs text-muted-foreground">
+                Consult AI activates once your title is long enough.
+              </p>
+            )}
+
             {!errors.title &&
               debouncedTitle.trim().length > 2 && (
                 <>
@@ -500,6 +523,26 @@ export function TopicPanel({ submission }: { submission: Submission }) {
               )}
           </div>
 
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="topic-description">
+              Description{" "}
+              <span className="font-normal text-muted-foreground">
+                (optional)
+              </span>
+            </Label>
+            <Textarea
+              id="topic-description"
+              rows={3}
+              maxLength={TOPIC_DESCRIPTION_MAX_LENGTH}
+              placeholder="Explain a bit what you intended to do"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Explain a bit what you intended to do. Consult AI also uses
+              this to give better feedback.
+            </p>
+          </div>
 
           {(consultResult || consultError) && (
             <ConsultAiCard
@@ -548,6 +591,7 @@ export function TopicPanel({ submission }: { submission: Submission }) {
                 onClick={() => {
                   setIsEditing(false)
                   setTitle(topic.originalTitle)
+                  setDescription(topic.description ?? "")
                   reset({
                     title: topic.originalTitle,
                   })

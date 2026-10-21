@@ -4,6 +4,8 @@ import type { ConsultAiResult } from "@/lib/types";
 export interface ConsultAiPayload {
   submissionId: string;
   title: string;
+  /** Optional project description written under the title. */
+  description?: string;
 }
 
 export const consultAiApi = {

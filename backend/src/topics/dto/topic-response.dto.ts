@@ -1,4 +1,5 @@
 import { Topic } from '@prisma/client';
+import { parseTopicText } from '../../common/utils/topic-text.util';
 
 export interface TopicMemberSummary {
   id: string;
@@ -26,7 +27,9 @@ export class TopicResponseDto {
   id!: string;
   submissionId!: string;
   studentId!: string;
+  /** Title only — the description is stored in the same column and split out here. */
   originalTitle!: string;
+  description!: string | null;
   normalizedTitle!: string;
   createdAt!: Date;
   updatedAt!: Date;
@@ -48,7 +51,9 @@ export class TopicResponseDto {
     this.id = topic.id;
     this.submissionId = topic.submissionId;
     this.studentId = topic.studentId;
-    this.originalTitle = topic.originalTitle;
+    const parsed = parseTopicText(topic.originalTitle);
+    this.originalTitle = parsed.title;
+    this.description = parsed.description;
     this.normalizedTitle = topic.normalizedTitle;
     this.createdAt = topic.createdAt;
     this.updatedAt = topic.updatedAt;
