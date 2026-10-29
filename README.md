@@ -7,11 +7,11 @@ TopicGuard helps a classroom coordinate project/thesis topic registration withou
 - **Auth** — email/password registration with OTP email verification, login, forgot/reset password, JWT stored in an httpOnly cookie.
 - **Classrooms** — a monitor creates a classroom and shares a join code; students join with it. Monitor role can be transferred; classrooms can be archived.
 - **Submissions** — a monitor opens a submission (e.g. "Thesis Topic — Fall 2026") that students register topics against; it can later be closed to lock topics in.
-- **Topic registration** — students (solo or as a team, with a leader + members) submit a topic title.
-  - **Exact-match check** as they type.
+- **Topic registration** — students (solo or as a team, with a leader + members) submit a topic title and description.
+  - **Exact-match check** as they type the title.
   - **Semantic similarity check** on submit, using text embeddings — flags topics that are worded differently but conceptually the same, and shows the closest matches before letting the student confirm anyway.
 - **Consult AI** *(optional)* — an on-demand button that sends the topic (plus lightweight context) to an LLM via Groq and returns a score, a couple of quick comments, and 2–3 alternative title suggestions.
-- **Messaging** — simple classroom-wide announcements/messages from the monitor.
+- **Messaging** — simple classroom-wide announcements/messages from the monitor. Also general students can send private message to class monitor and have a conversation.
 - **Rate limiting** — per-user request limits on Consult AI (stricter, tuned to Groq's free-tier budget) and on topic register/edit (looser, since embeddings run locally by default).
 
 ## Tech stack
@@ -95,7 +95,7 @@ Visit `http://localhost:3001` (or whatever port Next.js picks).
 
 ## Rate limits
 
-To keep the app inexpensive and abuse-resistant at a small scale (tens to ~100 users), a few endpoints carry simple, in-memory, per-user rate limits:
+To keep the app inexpensive and abuse-resistant at a small scale, a few endpoints carry simple, in-memory, per-user rate limits:
 
 - **Consult AI**: 30s cooldown between calls + 10 calls/day per user (Groq's free tier caps the whole app at 1,000 requests/day).
 - **Register/edit topic**: 10 requests/minute per user (shared across both, since each triggers an embedding call).
